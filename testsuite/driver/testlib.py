@@ -276,6 +276,13 @@ def req_c( name, opts ):
     # JS backend doesn't support C (yet)
     js_skip(name, opts)
 
+def req_cmm( name, opts ):
+    """
+    Mark a test as requiring Cmm support
+    """
+    # JS backend doesn't support Cmm
+    js_skip(name, opts)
+
 def req_ffi_exports( name, opts):
     """
     Mark a test as requiring FFI exports
@@ -810,8 +817,7 @@ def objcpp_src( name, opts ):
 
 def cmm_src( name, opts ):
     opts.cmm_src = True
-    # JS backend doesn't support Cmm
-    js_skip(name, opts)
+    req_cmm(name, opts)
 
 def outputdir( odir ):
     return lambda name, opts, d=odir: _outputdir(name, opts, d)
