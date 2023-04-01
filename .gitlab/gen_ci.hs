@@ -904,8 +904,10 @@ job_groups =
         { bignumBackend = Native
         }
      , make_wasm_jobs wasm_build_config
-     , disableValidate $ make_wasm_jobs wasm_build_config { bignumBackend = Native }
-     , disableValidate $ make_wasm_jobs wasm_build_config { unregisterised = True }
+     , modifyValidateJobs manual $
+         make_wasm_jobs wasm_build_config {bignumBackend = Native}
+     , modifyValidateJobs manual $
+         make_wasm_jobs wasm_build_config {unregisterised = True}
      , addValidateRule NonmovingGc (validateBuilds Amd64 (Linux Debian11) vanilla {validateNonmovingGc = True})
      ]
 
