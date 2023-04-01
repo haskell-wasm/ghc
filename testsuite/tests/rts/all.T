@@ -411,7 +411,7 @@ test('T10296a', [req_ghc_smp], makefile_test, ['T10296a'])
 
 test('T10296b', [only_ways(['threaded2'])], compile_and_run, [''])
 
-test('numa001', [ extra_run_opts('8'), unless(unregisterised(), extra_ways(['debug_numa'])) ]
+test('numa001', [ extra_run_opts('8'), unless(unregisterised(), extra_ways(['debug_numa'])), req_ghc_with_threaded_rts ]
                 , compile_and_run, [''])
 
 test('T12497', [ unless(opsys('mingw32'), skip), expect_broken(22694)
@@ -428,7 +428,7 @@ test('T12903', [ fragile(21184)
                , req_process]
                , compile_and_run, [''])
 
-test('T13832', exit_code(1), compile_and_run, ['-threaded'])
+test('T13832', [exit_code(1), req_ghc_with_threaded_rts], compile_and_run, ['-threaded'])
 test('T13894', normal, compile_and_run, [''])
 # this test fails with the profasm way on some machines but not others,
 # so we just skip it.
@@ -557,7 +557,7 @@ test('cloneMyStack2',
 
 test('cloneMyStack_retBigStackFrame', [req_c, extra_files(['cloneStackLib.c']), ignore_stdout], compile_and_run, ['cloneStackLib.c'])
 
-test('cloneThreadStack', [req_c, only_ways(['threaded1']), extra_ways(['threaded1']), extra_files(['cloneStackLib.c'])], compile_and_run, ['cloneStackLib.c -threaded'])
+test('cloneThreadStack', [req_c, only_ways(['threaded1']), extra_ways(['threaded1']), extra_files(['cloneStackLib.c']), req_ghc_with_threaded_rts], compile_and_run, ['cloneStackLib.c -threaded'])
 
 test('decodeMyStack',
   [ js_broken(22261) # cloneMyStack# not yet implemented
