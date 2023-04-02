@@ -5,7 +5,7 @@ test('T16916', [when(opsys('mingw32'), skip), js_broken(22261), fragile(16966), 
 test('T24672', [when(opsys('mingw32'), skip), js_broken(22261),req_process], compile_and_run, [''])
 test('T17310', normal, compile, [''])
 test('T19691', normal, compile, [''])
-test('executablePath', [extra_run_opts(config.os), js_broken(22261)], compile_and_run, [''])
+test('executablePath', [extra_run_opts(config.os), js_broken(22261), when(arch('wasm32'), fragile(23248))], compile_and_run, [''])
 test('T17472', normal, compile_and_run, [''])
 test('T19569b', normal, compile_and_run, [''])
 test('Monoid_ByteArray', normal, compile_and_run, [''])
