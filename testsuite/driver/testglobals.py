@@ -138,6 +138,9 @@ class TestConfig:
 
         # Do we even have processes?
         self.have_process = True
+        
+        # Do we have RTS linker?
+        self.have_RTS_linker = False
 
         # Does the platform support loading of dynamic shared libraries? e.g.
         # some musl-based environments do not.
