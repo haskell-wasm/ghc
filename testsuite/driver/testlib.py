@@ -318,6 +318,16 @@ def req_ghc_with_threaded_rts( name, opts ):
     if not config.ghc_with_threaded_rts:
         opts.skip = True
 
+def req_host_target_ghc( name, opts ):
+    """
+    When testing a cross GHC, some test cases require a host GHC as
+    well (e.g. for compiling custom Setup.hs). This is not supported
+    yet (#23236), so for the time being we skip them when testing
+    cross GHCs.
+    """
+    if isCross():
+        opts.skip = True
+
 def ignore_stdout(name, opts):
     opts.ignore_stdout = True
 
