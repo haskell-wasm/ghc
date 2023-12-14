@@ -10,6 +10,8 @@
   * Improve documentation of various functions
   * Implement primitives like `lstat` and `rmdir`, for the JS backend.
 
+  * Treat all FDs as "nonblocking" on wasm32 ([CLC proposal #234](https://github.com/haskell/core-libraries-committee/issues/234))
+
 ## 4.19.0.0 *October 2023*
 
   * Shipped with GHC 9.8.1
