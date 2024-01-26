@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Strict #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module GHC.CmmToAsm.Wasm (ncgWasm) where
 
@@ -8,6 +9,9 @@ import Data.ByteString.Builder
 import Data.Maybe
 import Data.Semigroup
 import GHC.Cmm
+import GHC.Cmm.ContFlowOpt
+import GHC.Cmm.GenericOpt
+import GHC.CmmToAsm.Config
 import GHC.CmmToAsm.Wasm.Asm
 import GHC.CmmToAsm.Wasm.FromCmm
 import GHC.CmmToAsm.Wasm.Types
@@ -21,6 +25,7 @@ import GHC.Utils.CliOption
 import System.IO
 
 ncgWasm ::
+  NCGConfig ->
   Platform ->
   ToolSettings ->
   UniqSupply ->
@@ -28,8 +33,8 @@ ncgWasm ::
   Handle ->
   Stream IO RawCmmGroup a ->
   IO a
-ncgWasm platform ts us loc h cmms = do
-  (r, s) <- streamCmmGroups platform us cmms
+ncgWasm ncg_config platform ts us loc h cmms = do
+  (r, s) <- streamCmmGroups ncg_config platform us cmms
   hPutBuilder h $ "# " <> string7 (fromJust $ ml_hs_file loc) <> "\n\n"
   hPutBuilder h $ execWasmAsmM do_tail_call $ asmTellEverything TagI32 s
   pure r
@@ -38,17 +43,26 @@ ncgWasm platform ts us loc h cmms = do
     do_tail_call = doTailCall ts
 
 streamCmmGroups ::
+  NCGConfig ->
   Platform ->
   UniqSupply ->
   Stream IO RawCmmGroup a ->
   IO (a, WasmCodeGenState 'I32)
-streamCmmGroups platform us cmms =
-  go (initialWasmCodeGenState platform us) $
-    runStream cmms
+streamCmmGroups ncg_config platform us cmms =
+  go (initialWasmCodeGenState platform us) $ runStream cmms
   where
     go s (Done r) = pure (r, s)
     go s (Effect m) = m >>= go s
-    go s (Yield cmm k) = go (wasmExecM (onCmmGroup cmm) s) k
+    go s (Yield decls k) = go (wasmExecM (onCmmGroup $ map opt decls) s) k
+      where
+        -- Run the generic cmm optimizations like other NCGs, followed
+        -- by a late control-flow optimization pass that does shrink
+        -- the CFG block count in some cases.
+        opt decl = case decl of
+          CmmData {} -> decl
+          CmmProc {} -> CmmProc info lbl live $ cmmCfgOpts False graph
+            where
+              (CmmProc info lbl live graph, _) = cmmToCmm ncg_config decl
 
 doTailCall :: ToolSettings -> Bool
 doTailCall ts = Option "-mtail-call" `elem` as_args
