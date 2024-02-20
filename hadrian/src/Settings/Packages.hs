@@ -345,7 +345,7 @@ rtsPackageArgs = package rts ? do
           , Debug     `wayUnit` way          ? pure [ "-DDEBUG"
                                                     , "-fno-omit-frame-pointer"
                                                     , "-g3"
-                                                    , "-O0" ]
+                                                    , "-Og" ]
           -- Set the namespace for the rts fs functions
           , arg $ "-DFS_NAMESPACE=rts"
 
