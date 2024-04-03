@@ -93,7 +93,7 @@ stage0Packages = do
              , ghc
              , runGhc
              , ghcBoot
-             , ghcBootTh
+             , ghcBootThNext
              , ghcPlatform
              , ghcHeap
              , ghcToolchain
@@ -109,7 +109,7 @@ stage0Packages = do
              , parsec
              , semaphoreCompat
              , time
-             , templateHaskell
+             , templateHaskellNext
              , text
              , transformers
              , unlit
@@ -128,6 +128,10 @@ stage1Packages = do
           -- but not win32/unix because it depends on cross-compilation target
           | p == win32        = False
           | p == unix         = False
+          -- These packages are only needed for bootstrapping.
+          -- See Note [Bootstrapping Template Haskell]
+          | p == templateHaskellNext = False
+          | p == ghcBootThNext = False
           | otherwise         = True
 
     libraries0 <- filter good_stage0_package <$> stage0Packages
@@ -144,6 +148,7 @@ stage1Packages = do
         , deepseq
         , exceptions
         , ghc
+        , ghcBootTh
         , ghcBignum
         , ghcCompact
         , ghcExperimental
@@ -157,6 +162,7 @@ stage1Packages = do
         , pretty
         , rts
         , semaphoreCompat
+        , templateHaskell
         , stm
         , unlit
         , xhtml
