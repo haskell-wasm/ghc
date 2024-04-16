@@ -24,7 +24,6 @@ system-cc      = @CC_STAGE0@
 system-ghc     = @WithGhc@
 system-ghc-pkg = @GhcPkgCmd@
 tar            = @TarCmd@
-patch          = @PatchCmd@
 xelatex        = @XELATEX@
 makeindex      = @MAKEINDEX@
 makeinfo       = @MAKEINFO@
