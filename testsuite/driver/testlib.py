@@ -304,11 +304,11 @@ def req_ghc_smp( name, opts ):
 def req_target_smp( name, opts ):
     """
     Mark a test as requiring smp when run on the target. If the target does
-    not support smp, then mark the test as an expected fail. Use this when the
+    not support smp, then skip the test. Use this when the
     test needs to run with smp support.
     """
     if not config.target_has_smp:
-        opts.expect = 'fail'
+        opts.skip = True
 
 def req_process( name, opts ):
     if not config.have_process:
