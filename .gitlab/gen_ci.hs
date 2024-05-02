@@ -146,6 +146,7 @@ data BuildConfig
                 , crossEmulator  :: CrossEmulator
                 , configureWrapper :: Maybe String
                 , fullyStatic    :: Bool
+                , hostFullyStatic :: Bool
                 , tablesNextToCode :: Bool
                 , threadSanitiser :: Bool
                 , noSplitSections :: Bool
@@ -167,6 +168,7 @@ mkJobFlavour BuildConfig{..} = Flavour buildFlavour opts
     opts = [Llvm | llvmBootstrap] ++
            [Dwarf | withDwarf] ++
            [FullyStatic | fullyStatic] ++
+           [HostFullyStatic | hostFullyStatic] ++
            [ThreadSanitiser | threadSanitiser] ++
            [NoSplitSections | noSplitSections, buildFlavour == Release ] ++
            [BootNonmovingGc | validateNonmovingGc ]
@@ -174,7 +176,7 @@ mkJobFlavour BuildConfig{..} = Flavour buildFlavour opts
 data Flavour = Flavour BaseFlavour [FlavourTrans]
 
 data FlavourTrans
-    = Llvm | Dwarf | FullyStatic | ThreadSanitiser | NoSplitSections
+    = Llvm | Dwarf | FullyStatic | HostFullyStatic | ThreadSanitiser | NoSplitSections
     | BootNonmovingGc
 
 data BaseFlavour = Release | Validate | SlowValidate deriving Eq
@@ -197,6 +199,7 @@ vanilla = BuildConfig
   , crossEmulator = NoEmulator
   , configureWrapper = Nothing
   , fullyStatic = False
+  , hostFullyStatic = False
   , tablesNextToCode = True
   , threadSanitiser = False
   , noSplitSections = False
@@ -282,7 +285,7 @@ distroName Ubuntu2004 = "ubuntu20_04"
 distroName Ubuntu2204 = "ubuntu22_04"
 distroName Centos7    = "centos7"
 distroName Alpine     = "alpine3_12"
-distroName AlpineWasm = "alpine3_17-wasm"
+distroName AlpineWasm = "alpine3_20-wasm"
 distroName Rocky8     = "rocky8"
 
 opsysName :: Opsys -> String
@@ -324,6 +327,7 @@ flavourString (Flavour base trans) = baseString base ++ concatMap (("+" ++) . fl
     flavourString Llvm = "llvm"
     flavourString Dwarf = "debug_info"
     flavourString FullyStatic = "fully_static"
+    flavourString HostFullyStatic = "host_fully_static"
     flavourString ThreadSanitiser = "thread_sanitizer"
     flavourString NoSplitSections = "no_split_sections"
     flavourString BootNonmovingGc = "boot_nonmoving_gc"
@@ -940,7 +944,7 @@ job_groups =
     wasm_build_config =
       (crossConfig "wasm32-wasi" NoEmulatorNeeded Nothing)
         {
-          fullyStatic = True
+          hostFullyStatic = True
           , buildFlavour     = Release -- TODO: This needs to be validate but wasm backend doesn't pass yet
         }
 
