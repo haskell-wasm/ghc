@@ -951,198 +951,6 @@
       "XZ_OPT": "-9"
     }
   },
-  "nightly-x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static": {
-    "after_script": [
-      ".gitlab/ci.sh save_cache",
-      ".gitlab/ci.sh save_test_output",
-      ".gitlab/ci.sh clean",
-      "cat ci_timings"
-    ],
-    "allow_failure": false,
-    "artifacts": {
-      "expire_in": "8 weeks",
-      "paths": [
-        "ghc-x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static.tar.xz",
-        "junit.xml",
-        "unexpected-test-output.tar.gz"
-      ],
-      "reports": {
-        "junit": "junit.xml"
-      },
-      "when": "always"
-    },
-    "cache": {
-      "key": "x86_64-linux-alpine3_18-wasm-$CACHE_REV",
-      "paths": [
-        "cabal-cache",
-        "toolchain"
-      ]
-    },
-    "dependencies": [],
-    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_18-wasm:$DOCKER_REV",
-    "needs": [
-      {
-        "artifacts": false,
-        "job": "hadrian-ghc-in-ghci"
-      }
-    ],
-    "rules": [
-      {
-        "if": "(\"true\" == \"true\") && ($RELEASE_JOB != \"yes\") && ($NIGHTLY)",
-        "when": "on_success"
-      }
-    ],
-    "script": [
-      "sudo chown ghc:ghc -R .",
-      ".gitlab/ci.sh setup",
-      ".gitlab/ci.sh configure",
-      ".gitlab/ci.sh build_hadrian",
-      ".gitlab/ci.sh test_hadrian"
-    ],
-    "stage": "full-build",
-    "tags": [
-      "x86_64-linux"
-    ],
-    "variables": {
-      "BIGNUM_BACKEND": "gmp",
-      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static",
-      "BUILD_FLAVOUR": "release+fully_static",
-      "CONFIGURE_ARGS": "--with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
-      "CROSS_TARGET": "wasm32-wasi",
-      "HADRIAN_ARGS": "--docs=none",
-      "RUNTEST_ARGS": "",
-      "TEST_ENV": "x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static",
-      "XZ_OPT": "-9"
-    }
-  },
-  "nightly-x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static": {
-    "after_script": [
-      ".gitlab/ci.sh save_cache",
-      ".gitlab/ci.sh save_test_output",
-      ".gitlab/ci.sh clean",
-      "cat ci_timings"
-    ],
-    "allow_failure": false,
-    "artifacts": {
-      "expire_in": "8 weeks",
-      "paths": [
-        "ghc-x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static.tar.xz",
-        "junit.xml",
-        "unexpected-test-output.tar.gz"
-      ],
-      "reports": {
-        "junit": "junit.xml"
-      },
-      "when": "always"
-    },
-    "cache": {
-      "key": "x86_64-linux-alpine3_18-wasm-$CACHE_REV",
-      "paths": [
-        "cabal-cache",
-        "toolchain"
-      ]
-    },
-    "dependencies": [],
-    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_18-wasm:$DOCKER_REV",
-    "needs": [
-      {
-        "artifacts": false,
-        "job": "hadrian-ghc-in-ghci"
-      }
-    ],
-    "rules": [
-      {
-        "if": "(\"true\" == \"true\") && ($RELEASE_JOB != \"yes\") && ($NIGHTLY)",
-        "when": "on_success"
-      }
-    ],
-    "script": [
-      "sudo chown ghc:ghc -R .",
-      ".gitlab/ci.sh setup",
-      ".gitlab/ci.sh configure",
-      ".gitlab/ci.sh build_hadrian",
-      ".gitlab/ci.sh test_hadrian"
-    ],
-    "stage": "full-build",
-    "tags": [
-      "x86_64-linux"
-    ],
-    "variables": {
-      "BIGNUM_BACKEND": "native",
-      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static",
-      "BUILD_FLAVOUR": "release+fully_static",
-      "CONFIGURE_ARGS": "--with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
-      "CROSS_TARGET": "wasm32-wasi",
-      "HADRIAN_ARGS": "--docs=none",
-      "RUNTEST_ARGS": "",
-      "TEST_ENV": "x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static",
-      "XZ_OPT": "-9"
-    }
-  },
-  "nightly-x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static": {
-    "after_script": [
-      ".gitlab/ci.sh save_cache",
-      ".gitlab/ci.sh save_test_output",
-      ".gitlab/ci.sh clean",
-      "cat ci_timings"
-    ],
-    "allow_failure": false,
-    "artifacts": {
-      "expire_in": "8 weeks",
-      "paths": [
-        "ghc-x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static.tar.xz",
-        "junit.xml",
-        "unexpected-test-output.tar.gz"
-      ],
-      "reports": {
-        "junit": "junit.xml"
-      },
-      "when": "always"
-    },
-    "cache": {
-      "key": "x86_64-linux-alpine3_18-wasm-$CACHE_REV",
-      "paths": [
-        "cabal-cache",
-        "toolchain"
-      ]
-    },
-    "dependencies": [],
-    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_18-wasm:$DOCKER_REV",
-    "needs": [
-      {
-        "artifacts": false,
-        "job": "hadrian-ghc-in-ghci"
-      }
-    ],
-    "rules": [
-      {
-        "if": "(\"true\" == \"true\") && ($RELEASE_JOB != \"yes\") && ($NIGHTLY)",
-        "when": "on_success"
-      }
-    ],
-    "script": [
-      "sudo chown ghc:ghc -R .",
-      ".gitlab/ci.sh setup",
-      ".gitlab/ci.sh configure",
-      ".gitlab/ci.sh build_hadrian",
-      ".gitlab/ci.sh test_hadrian"
-    ],
-    "stage": "full-build",
-    "tags": [
-      "x86_64-linux"
-    ],
-    "variables": {
-      "BIGNUM_BACKEND": "gmp",
-      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static",
-      "BUILD_FLAVOUR": "release+fully_static",
-      "CONFIGURE_ARGS": "--enable-unregisterised --with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
-      "CROSS_TARGET": "wasm32-wasi",
-      "HADRIAN_ARGS": "--docs=none",
-      "RUNTEST_ARGS": "",
-      "TEST_ENV": "x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static",
-      "XZ_OPT": "-9"
-    }
-  },
   "nightly-x86_64-linux-alpine3_20-validate": {
     "after_script": [
       ".gitlab/ci.sh save_cache",
@@ -1204,6 +1012,198 @@
       "INSTALL_CONFIGURE_ARGS": "--disable-ld-override",
       "RUNTEST_ARGS": "",
       "TEST_ENV": "x86_64-linux-alpine3_20-validate",
+      "XZ_OPT": "-9"
+    }
+  },
+  "nightly-x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static": {
+    "after_script": [
+      ".gitlab/ci.sh save_cache",
+      ".gitlab/ci.sh save_test_output",
+      ".gitlab/ci.sh clean",
+      "cat ci_timings"
+    ],
+    "allow_failure": false,
+    "artifacts": {
+      "expire_in": "8 weeks",
+      "paths": [
+        "ghc-x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static.tar.xz",
+        "junit.xml",
+        "unexpected-test-output.tar.gz"
+      ],
+      "reports": {
+        "junit": "junit.xml"
+      },
+      "when": "always"
+    },
+    "cache": {
+      "key": "x86_64-linux-alpine3_20-wasm-$CACHE_REV",
+      "paths": [
+        "cabal-cache",
+        "toolchain"
+      ]
+    },
+    "dependencies": [],
+    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_20-wasm:$DOCKER_REV",
+    "needs": [
+      {
+        "artifacts": false,
+        "job": "hadrian-ghc-in-ghci"
+      }
+    ],
+    "rules": [
+      {
+        "if": "(\"true\" == \"true\") && ($RELEASE_JOB != \"yes\") && ($NIGHTLY)",
+        "when": "on_success"
+      }
+    ],
+    "script": [
+      "sudo chown ghc:ghc -R .",
+      ".gitlab/ci.sh setup",
+      ".gitlab/ci.sh configure",
+      ".gitlab/ci.sh build_hadrian",
+      ".gitlab/ci.sh test_hadrian"
+    ],
+    "stage": "full-build",
+    "tags": [
+      "x86_64-linux"
+    ],
+    "variables": {
+      "BIGNUM_BACKEND": "gmp",
+      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static",
+      "BUILD_FLAVOUR": "release+host_fully_static",
+      "CONFIGURE_ARGS": "--with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
+      "CROSS_TARGET": "wasm32-wasi",
+      "HADRIAN_ARGS": "--docs=none",
+      "RUNTEST_ARGS": "",
+      "TEST_ENV": "x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static",
+      "XZ_OPT": "-9"
+    }
+  },
+  "nightly-x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static": {
+    "after_script": [
+      ".gitlab/ci.sh save_cache",
+      ".gitlab/ci.sh save_test_output",
+      ".gitlab/ci.sh clean",
+      "cat ci_timings"
+    ],
+    "allow_failure": false,
+    "artifacts": {
+      "expire_in": "8 weeks",
+      "paths": [
+        "ghc-x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static.tar.xz",
+        "junit.xml",
+        "unexpected-test-output.tar.gz"
+      ],
+      "reports": {
+        "junit": "junit.xml"
+      },
+      "when": "always"
+    },
+    "cache": {
+      "key": "x86_64-linux-alpine3_20-wasm-$CACHE_REV",
+      "paths": [
+        "cabal-cache",
+        "toolchain"
+      ]
+    },
+    "dependencies": [],
+    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_20-wasm:$DOCKER_REV",
+    "needs": [
+      {
+        "artifacts": false,
+        "job": "hadrian-ghc-in-ghci"
+      }
+    ],
+    "rules": [
+      {
+        "if": "(\"true\" == \"true\") && ($RELEASE_JOB != \"yes\") && ($NIGHTLY)",
+        "when": "on_success"
+      }
+    ],
+    "script": [
+      "sudo chown ghc:ghc -R .",
+      ".gitlab/ci.sh setup",
+      ".gitlab/ci.sh configure",
+      ".gitlab/ci.sh build_hadrian",
+      ".gitlab/ci.sh test_hadrian"
+    ],
+    "stage": "full-build",
+    "tags": [
+      "x86_64-linux"
+    ],
+    "variables": {
+      "BIGNUM_BACKEND": "native",
+      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static",
+      "BUILD_FLAVOUR": "release+host_fully_static",
+      "CONFIGURE_ARGS": "--with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
+      "CROSS_TARGET": "wasm32-wasi",
+      "HADRIAN_ARGS": "--docs=none",
+      "RUNTEST_ARGS": "",
+      "TEST_ENV": "x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static",
+      "XZ_OPT": "-9"
+    }
+  },
+  "nightly-x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static": {
+    "after_script": [
+      ".gitlab/ci.sh save_cache",
+      ".gitlab/ci.sh save_test_output",
+      ".gitlab/ci.sh clean",
+      "cat ci_timings"
+    ],
+    "allow_failure": false,
+    "artifacts": {
+      "expire_in": "8 weeks",
+      "paths": [
+        "ghc-x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static.tar.xz",
+        "junit.xml",
+        "unexpected-test-output.tar.gz"
+      ],
+      "reports": {
+        "junit": "junit.xml"
+      },
+      "when": "always"
+    },
+    "cache": {
+      "key": "x86_64-linux-alpine3_20-wasm-$CACHE_REV",
+      "paths": [
+        "cabal-cache",
+        "toolchain"
+      ]
+    },
+    "dependencies": [],
+    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_20-wasm:$DOCKER_REV",
+    "needs": [
+      {
+        "artifacts": false,
+        "job": "hadrian-ghc-in-ghci"
+      }
+    ],
+    "rules": [
+      {
+        "if": "(\"true\" == \"true\") && ($RELEASE_JOB != \"yes\") && ($NIGHTLY)",
+        "when": "on_success"
+      }
+    ],
+    "script": [
+      "sudo chown ghc:ghc -R .",
+      ".gitlab/ci.sh setup",
+      ".gitlab/ci.sh configure",
+      ".gitlab/ci.sh build_hadrian",
+      ".gitlab/ci.sh test_hadrian"
+    ],
+    "stage": "full-build",
+    "tags": [
+      "x86_64-linux"
+    ],
+    "variables": {
+      "BIGNUM_BACKEND": "gmp",
+      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static",
+      "BUILD_FLAVOUR": "release+host_fully_static",
+      "CONFIGURE_ARGS": "--enable-unregisterised --with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
+      "CROSS_TARGET": "wasm32-wasi",
+      "HADRIAN_ARGS": "--docs=none",
+      "RUNTEST_ARGS": "",
+      "TEST_ENV": "x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static",
       "XZ_OPT": "-9"
     }
   },
@@ -4463,7 +4463,7 @@
       "TEST_ENV": "x86_64-linux-alpine3_12-validate+fully_static"
     }
   },
-  "x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static": {
+  "x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static": {
     "after_script": [
       ".gitlab/ci.sh save_cache",
       ".gitlab/ci.sh save_test_output",
@@ -4474,7 +4474,7 @@
     "artifacts": {
       "expire_in": "2 weeks",
       "paths": [
-        "ghc-x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static.tar.xz",
+        "ghc-x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static.tar.xz",
         "junit.xml",
         "unexpected-test-output.tar.gz"
       ],
@@ -4484,14 +4484,14 @@
       "when": "always"
     },
     "cache": {
-      "key": "x86_64-linux-alpine3_18-wasm-$CACHE_REV",
+      "key": "x86_64-linux-alpine3_20-wasm-$CACHE_REV",
       "paths": [
         "cabal-cache",
         "toolchain"
       ]
     },
     "dependencies": [],
-    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_18-wasm:$DOCKER_REV",
+    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_20-wasm:$DOCKER_REV",
     "needs": [
       {
         "artifacts": false,
@@ -4517,16 +4517,16 @@
     ],
     "variables": {
       "BIGNUM_BACKEND": "gmp",
-      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static",
-      "BUILD_FLAVOUR": "release+fully_static",
+      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static",
+      "BUILD_FLAVOUR": "release+host_fully_static",
       "CONFIGURE_ARGS": "--with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
       "CROSS_TARGET": "wasm32-wasi",
       "HADRIAN_ARGS": "--docs=none",
       "RUNTEST_ARGS": "",
-      "TEST_ENV": "x86_64-linux-alpine3_18-wasm-cross_wasm32-wasi-release+fully_static"
+      "TEST_ENV": "x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static"
     }
   },
-  "x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static": {
+  "x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static": {
     "after_script": [
       ".gitlab/ci.sh save_cache",
       ".gitlab/ci.sh save_test_output",
@@ -4537,7 +4537,7 @@
     "artifacts": {
       "expire_in": "2 weeks",
       "paths": [
-        "ghc-x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static.tar.xz",
+        "ghc-x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static.tar.xz",
         "junit.xml",
         "unexpected-test-output.tar.gz"
       ],
@@ -4547,14 +4547,14 @@
       "when": "always"
     },
     "cache": {
-      "key": "x86_64-linux-alpine3_18-wasm-$CACHE_REV",
+      "key": "x86_64-linux-alpine3_20-wasm-$CACHE_REV",
       "paths": [
         "cabal-cache",
         "toolchain"
       ]
     },
     "dependencies": [],
-    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_18-wasm:$DOCKER_REV",
+    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_20-wasm:$DOCKER_REV",
     "needs": [
       {
         "artifacts": false,
@@ -4581,16 +4581,16 @@
     ],
     "variables": {
       "BIGNUM_BACKEND": "native",
-      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static",
-      "BUILD_FLAVOUR": "release+fully_static",
+      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static",
+      "BUILD_FLAVOUR": "release+host_fully_static",
       "CONFIGURE_ARGS": "--with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
       "CROSS_TARGET": "wasm32-wasi",
       "HADRIAN_ARGS": "--docs=none",
       "RUNTEST_ARGS": "",
-      "TEST_ENV": "x86_64-linux-alpine3_18-wasm-int_native-cross_wasm32-wasi-release+fully_static"
+      "TEST_ENV": "x86_64-linux-alpine3_20-wasm-int_native-cross_wasm32-wasi-release+host_fully_static"
     }
   },
-  "x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static": {
+  "x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static": {
     "after_script": [
       ".gitlab/ci.sh save_cache",
       ".gitlab/ci.sh save_test_output",
@@ -4601,7 +4601,7 @@
     "artifacts": {
       "expire_in": "2 weeks",
       "paths": [
-        "ghc-x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static.tar.xz",
+        "ghc-x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static.tar.xz",
         "junit.xml",
         "unexpected-test-output.tar.gz"
       ],
@@ -4611,14 +4611,14 @@
       "when": "always"
     },
     "cache": {
-      "key": "x86_64-linux-alpine3_18-wasm-$CACHE_REV",
+      "key": "x86_64-linux-alpine3_20-wasm-$CACHE_REV",
       "paths": [
         "cabal-cache",
         "toolchain"
       ]
     },
     "dependencies": [],
-    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_18-wasm:$DOCKER_REV",
+    "image": "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-alpine3_20-wasm:$DOCKER_REV",
     "needs": [
       {
         "artifacts": false,
@@ -4645,13 +4645,13 @@
     ],
     "variables": {
       "BIGNUM_BACKEND": "gmp",
-      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static",
-      "BUILD_FLAVOUR": "release+fully_static",
+      "BIN_DIST_NAME": "ghc-x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static",
+      "BUILD_FLAVOUR": "release+host_fully_static",
       "CONFIGURE_ARGS": "--enable-unregisterised --with-intree-gmp --with-system-libffi --enable-strict-ghc-toolchain-check",
       "CROSS_TARGET": "wasm32-wasi",
       "HADRIAN_ARGS": "--docs=none",
       "RUNTEST_ARGS": "",
-      "TEST_ENV": "x86_64-linux-alpine3_18-wasm-unreg-cross_wasm32-wasi-release+fully_static"
+      "TEST_ENV": "x86_64-linux-alpine3_20-wasm-unreg-cross_wasm32-wasi-release+host_fully_static"
     }
   },
   "x86_64-linux-deb10-int_native-validate": {
