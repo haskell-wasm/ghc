@@ -152,6 +152,7 @@ data BuildConfig
                 , crossEmulator  :: CrossEmulator
                 , configureWrapper :: Maybe String
                 , fullyStatic    :: Bool
+                , hostFullyStatic :: Bool
                 , tablesNextToCode :: Bool
                 , threadSanitiser :: Bool
                 , noSplitSections :: Bool
@@ -174,6 +175,7 @@ mkJobFlavour BuildConfig{..} = Flavour buildFlavour opts
     opts = [Llvm | llvmBootstrap] ++
            [Dwarf | withDwarf] ++
            [FullyStatic | fullyStatic] ++
+           [HostFullyStatic | hostFullyStatic] ++
            [ThreadSanitiser | threadSanitiser] ++
            [NoSplitSections | noSplitSections, buildFlavour == Release ] ++
            [BootNonmovingGc | validateNonmovingGc ]
@@ -184,6 +186,7 @@ data FlavourTrans =
       Llvm
     | Dwarf
     | FullyStatic
+    | HostFullyStatic
     | ThreadSanitiser
     | NoSplitSections
     | BootNonmovingGc
@@ -209,6 +212,7 @@ vanilla = BuildConfig
   , crossEmulator = NoEmulator
   , configureWrapper = Nothing
   , fullyStatic = False
+  , hostFullyStatic = False
   , tablesNextToCode = True
   , threadSanitiser = False
   , noSplitSections = False
@@ -300,7 +304,7 @@ distroName Centos7    = "centos7"
 distroName Alpine312  = "alpine3_12"
 distroName Alpine318  = "alpine3_18"
 distroName Alpine320  = "alpine3_20"
-distroName AlpineWasm = "alpine3_17-wasm"
+distroName AlpineWasm = "alpine3_20-wasm"
 distroName Rocky8     = "rocky8"
 
 opsysName :: Opsys -> String
@@ -342,6 +346,7 @@ flavourString (Flavour base trans) = base_string base ++ concatMap (("+" ++) . f
     flavour_string Llvm = "llvm"
     flavour_string Dwarf = "debug_info"
     flavour_string FullyStatic = "fully_static"
+    flavour_string HostFullyStatic = "host_fully_static"
     flavour_string ThreadSanitiser = "thread_sanitizer"
     flavour_string NoSplitSections = "no_split_sections"
     flavour_string BootNonmovingGc = "boot_nonmoving_gc"
@@ -981,7 +986,7 @@ job_groups =
     wasm_build_config =
       (crossConfig "wasm32-wasi" NoEmulatorNeeded Nothing)
         {
-          fullyStatic = True
+          hostFullyStatic = True
           , buildFlavour     = Release -- TODO: This needs to be validate but wasm backend doesn't pass yet
         }
 
