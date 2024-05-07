@@ -14,7 +14,6 @@ configureBuilderArgs = do
                 targetPlatform <- getSetting TargetPlatform
                 buildPlatform <- getSetting BuildPlatform
                 pure $ [ "--enable-shared=no"
-                     , "--with-pic=yes"
                      , "--host=" ++ targetPlatform    -- GMP's host is our target
                      , "--build=" ++ buildPlatform ]
                      -- Disable GMP's alloca usage on wasm32, it may
@@ -24,6 +23,10 @@ configureBuilderArgs = do
                      -- more detailed explanation of this configure
                      -- option.
                      <> [ "--enable-alloca=malloc-reentrant" | targetArch == "wasm32" ]
+                     -- Enable PIC unless target is wasm32, in which
+                     -- case we don't want libgmp.a to be bloated due
+                     -- to PIC overhead.
+                     <> [ "--with-pic=yes" | targetArch /= "wasm32" ]
 
             , builder (Configure libffiPath) ? do
                 top            <- expr topDirectory
