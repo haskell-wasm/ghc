@@ -70,6 +70,8 @@ data StgToCmmConfig = StgToCmmConfig
   , stgToCmmAllowIntMul2Instr         :: !Bool   -- ^ Allowed to generate IntMul2 instruction
   , stgToCmmAllowFMAInstr             :: FMASign -> Bool -- ^ Allowed to generate FMA instruction
   , stgToCmmTickyAP                   :: !Bool   -- ^ Disable use of precomputed standard thunks.
+  , stgToCmmSaveFCallTargetToLocal    :: !Bool   -- ^ Save a foreign call target to a Cmm local, see
+                                                 -- Note [Saving foreign call target to local] for details
   ------------------------------ SIMD flags ------------------------------------
   -- Each of these flags checks vector compatibility with the backend requested
   -- during compilation. In essence, this means checking for @-fllvm@ which is
