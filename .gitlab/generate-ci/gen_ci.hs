@@ -115,6 +115,7 @@ data LinuxDistro
   | Ubuntu1804
   | Alpine312
   | Alpine318
+  | Alpine320
   | AlpineWasm
   | Rocky8
   deriving (Eq)
@@ -294,6 +295,7 @@ distroName Ubuntu1804 = "ubuntu18_04"
 distroName Ubuntu2004 = "ubuntu20_04"
 distroName Alpine312  = "alpine3_12"
 distroName Alpine318  = "alpine3_18"
+distroName Alpine320  = "alpine3_20"
 distroName AlpineWasm = "alpine3_18-wasm"
 distroName Rocky8     = "rocky8"
 
@@ -443,6 +445,7 @@ alpineVariables = mconcat
 distroVariables :: LinuxDistro -> Variables
 distroVariables Alpine312 = alpineVariables
 distroVariables Alpine318 = alpineVariables
+distroVariables Alpine320 = alpineVariables
 distroVariables Fedora33 = mconcat
   -- LLC/OPT do not work for some reason in our fedora images
   -- These tests fail with this error: T11649 T5681 T7571 T8131b
@@ -999,7 +1002,7 @@ job_groups =
      -- Dynamically linked build, suitable for building your own static executables on alpine
      , disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken vanilla)))
      , disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine318) (splitSectionsBroken vanilla))
-     , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine318) (splitSectionsBroken vanilla))
+     , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine320) (splitSectionsBroken vanilla))
      , fullyStaticBrokenTests (disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) staticNativeInt)))
      , validateBuilds Amd64 (Linux Debian11) (crossConfig "aarch64-linux-gnu" (Emulator "qemu-aarch64 -L /usr/aarch64-linux-gnu") Nothing)
 
