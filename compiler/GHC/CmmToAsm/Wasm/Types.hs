@@ -45,6 +45,8 @@ module GHC.CmmToAsm.Wasm.Types
     wasmStateM,
     wasmModifyM,
     wasmExecM,
+    WasmAsmConfig (..),
+    defaultWasmAsmConfig
   )
 where
 
@@ -136,7 +138,9 @@ data SymVisibility
     SymStatic
   | -- | Defined, visible to other compilation units.
     --
-    -- Adds @.hidden@ & @.globl@ directives in the output assembly.
+    -- Adds @.globl@ directives in the output assembly. Also adds
+    -- @.hidden@ when not generating PIC code, similar to
+    -- -fvisibility=hidden in clang.
     --
     -- @[ binding=global vis=hidden ]@
     SymDefault
@@ -481,3 +485,35 @@ instance MonadUnique (WasmCodeGenM w) where
     u <- getUniqueM
     s <- WasmCodeGenM get
     pure $ u:(wasmEvalM getUniquesM s)
+
+data WasmAsmConfig = WasmAsmConfig
+  {
+    pic, tailcall :: Bool,
+    -- | Data/function symbols with 'SymStatic' visibility (defined
+    -- but not visible to other compilation units). When doing PIC
+    -- codegen, private symbols must be emitted as @MBREL@/@TBREL@
+    -- relocations in the code section. The public symbols, defined or
+    -- elsewhere, are all emitted as @GOT@ relocations instead.
+    mbrelSyms, tbrelSyms :: ~SymSet
+  }
+
+-- | The default 'WasmAsmConfig' must be extracted from the final
+-- 'WasmCodeGenState'.
+defaultWasmAsmConfig :: WasmCodeGenState w -> WasmAsmConfig
+defaultWasmAsmConfig WasmCodeGenState {..} =
+  WasmAsmConfig
+    { pic = False,
+      tailcall = False,
+      mbrelSyms = mk_rel_syms dataSections,
+      tbrelSyms = mk_rel_syms funcBodies
+    }
+  where
+    mk_rel_syms :: SymMap a -> SymSet
+    mk_rel_syms =
+      nonDetFoldUniqMap
+        ( \(sym, _) acc ->
+            if getKey (getUnique sym) `WS.member` defaultSyms
+              then acc
+              else WS.insert (getKey (getUnique sym)) acc
+        )
+        WS.empty
