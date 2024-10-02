@@ -360,6 +360,7 @@ test('MultiLayerModulesTH_Make',
        extra_files(['genMultiLayerModulesTH']),
        unless(have_dynamic(),skip),
        compile_timeout_multiplier(5),
+       when(arch('wasm32'), fragile(25336)),
        # We skip the test on darwin due to recent regression due to toolchain
        # upgrade (tracked in #24177)
        when(opsys('darwin'), skip)
@@ -375,6 +376,7 @@ test('MultiLayerModulesTH_OneShot',
        extra_files(['genMultiLayerModulesTH']),
        unless(have_dynamic(),skip),
        compile_timeout_multiplier(5),
+       when(arch('wasm32'), fragile(25336)),
        # We skip the test on darwin due to recent regression due to toolchain
        # upgrade (tracked in #24177)
        when(opsys('darwin'), skip)
