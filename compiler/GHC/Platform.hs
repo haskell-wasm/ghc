@@ -253,7 +253,6 @@ platformHasRTSLinker p = case archOS_arch (platformArchOS p) of
   ArchRISCV64       -> False
   ArchLoongArch64   -> False
   ArchJavaScript    -> False
-  ArchWasm32        -> False
   _                 -> True
 
 
