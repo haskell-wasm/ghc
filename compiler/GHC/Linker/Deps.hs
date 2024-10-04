@@ -60,6 +60,7 @@ import System.Directory
 
 data LinkDepsOpts = LinkDepsOpts
   { ldObjSuffix   :: !String                        -- ^ Suffix of .o files
+  , ldForceDyn    :: !Bool                          -- ^ Always use .dyn_o?
   , ldOneShotMode :: !Bool                          -- ^ Is the driver in one-shot mode?
   , ldModuleGraph :: !ModuleGraph                   -- ^ Module graph
   , ldUnitEnv     :: !UnitEnv                       -- ^ Unit environment
@@ -349,6 +350,16 @@ throwProgramError opts doc = throwGhcExceptionIO (ProgramError (renderWithContex
 
 checkNonStdWay :: LinkDepsOpts -> Interp -> SrcSpan -> IO (Maybe FilePath)
 checkNonStdWay _opts interp _srcspan
+  -- On some targets (e.g. wasm) the RTS linker only supports loading
+  -- dynamic code, in which case we need to ensure the .dyn_o object
+  -- is picked (instead of .o which is also present because of
+  -- -dynamic-too)
+  | ldForceDyn _opts = do
+      let target_ways = fullWays $ ldWays _opts
+      pure $ if target_ways `hasWay` WayDyn
+        then Nothing
+        else Just $ waysTag (WayDyn `addWay` target_ways) ++ "_o"
+
   | ExternalInterp {} <- interpInstance interp = return Nothing
     -- with -fexternal-interpreter we load the .o files, whatever way
     -- they were built.  If they were built for a non-std way, then
