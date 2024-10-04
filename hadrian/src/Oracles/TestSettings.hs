@@ -31,6 +31,7 @@ data TestSetting = TestHostOS
                  | TestGhcWithNativeCodeGen
                  | TestGhcWithInterpreter
                  | TestGhcCrossCompiling
+                 | TestRTSLinkerForceDyn
                  | TestGhcWithRtsLinker
                  | TestGhcUnregisterised
                  | TestGhcTablesNextToCode
@@ -63,6 +64,7 @@ testSetting key = do
         TestGhcWithNativeCodeGen  -> "GhcWithNativeCodeGen"
         TestGhcWithInterpreter    -> "GhcWithInterpreter"
         TestGhcCrossCompiling     -> "CrossCompiling"
+        TestRTSLinkerForceDyn     -> "TargetRTSLinkerOnlySupportsSharedLibs"
         TestGhcWithRtsLinker      -> "GhcWithRtsLinker"
         TestGhcUnregisterised     -> "GhcUnregisterised"
         TestGhcTablesNextToCode   -> "GhcTablesNextToCode"

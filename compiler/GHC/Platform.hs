@@ -287,6 +287,7 @@ data PlatformMisc = PlatformMisc
   , platformMisc_ghcWithInterpreter   :: Bool
   , platformMisc_libFFI               :: Bool
   , platformMisc_llvmTarget           :: String
+  , platformMisc_targetRTSLinkerOnlySupportsSharedLibs :: Bool
   }
 
 platformSOName :: Platform -> FilePath -> FilePath

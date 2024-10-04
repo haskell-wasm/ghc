@@ -150,6 +150,12 @@ endif
 # `GhcUnregisterised` mode doesn't allow that.
 GhcWithSMP := $(strip $(if $(filter YESNO, $(ArchSupportsSMP)$(GhcUnregisterised)),YES,NO))
 
+ifeq "$(TargetArch_CPP)" "wasm32"
+TargetRTSLinkerOnlySupportsSharedLibs=YES
+else
+TargetRTSLinkerOnlySupportsSharedLibs=NO
+endif
+
 # Whether to include GHCi in the compiler.  Depends on whether the RTS linker
 # has support for this OS/ARCH combination.
 OsSupportsGHCi=$(strip $(patsubst $(TargetOS_CPP), YES, $(findstring $(TargetOS_CPP), mingw32 linux solaris2 freebsd dragonfly netbsd openbsd darwin kfreebsdgnu)))
@@ -237,5 +243,3 @@ SettingsLlcCommand = @SettingsLlcCommand@
 SettingsOptCommand = @SettingsOptCommand@
 SettingsLlvmAsCommand = @SettingsLlvmAsCommand@
 SettingsUseDistroMINGW = @SettingsUseDistroMINGW@
-
-
