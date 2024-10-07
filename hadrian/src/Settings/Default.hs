@@ -273,7 +273,6 @@ defaultFlavour = Flavour
     , libraryWays        = defaultLibraryWays
     , rtsWays            = defaultRtsWays
     , dynamicGhcPrograms = defaultDynamicGhcPrograms
-    , ghciWithDebugger   = const False
     , ghcProfiled        = const False
     , ghcDebugged        = const False
     , ghcThreaded        = const True
