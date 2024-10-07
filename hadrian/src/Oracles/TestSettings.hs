@@ -30,6 +30,7 @@ data TestSetting = TestHostOS
                  | TestGhcDebugAssertions
                  | TestGhcWithNativeCodeGen
                  | TestGhcWithInterpreter
+                 | TestGhcCrossCompiling
                  | TestGhcWithRtsLinker
                  | TestGhcUnregisterised
                  | TestGhcTablesNextToCode
@@ -61,6 +62,7 @@ testSetting key = do
         TestGhcDebugAssertions    -> "GhcDebugAssertions"
         TestGhcWithNativeCodeGen  -> "GhcWithNativeCodeGen"
         TestGhcWithInterpreter    -> "GhcWithInterpreter"
+        TestGhcCrossCompiling     -> "CrossCompiling"
         TestGhcWithRtsLinker      -> "GhcWithRtsLinker"
         TestGhcUnregisterised     -> "GhcUnregisterised"
         TestGhcTablesNextToCode   -> "GhcTablesNextToCode"
@@ -124,4 +126,3 @@ stageOfTestCompiler "stage1" = Just stage0InTree
 stageOfTestCompiler "stage2" = Just Stage1
 stageOfTestCompiler "stage3" = Just Stage2
 stageOfTestCompiler _ = Nothing
-
