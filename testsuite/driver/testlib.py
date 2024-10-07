@@ -258,11 +258,8 @@ def req_dynamic_ghc( name, opts ):
         skip(name,opts)
 
 def req_interp( name, opts ):
-    if not config.have_interp or isCross():
+    if not config.have_interp:
         opts.expect = 'fail'
-    # skip on wasm32, otherwise they show up as unexpected passes
-    if arch('wasm32'):
-        skip(name, opts)
 
 def req_bco( name, opts ):
     '''
@@ -552,7 +549,7 @@ def valid_way( way: WayName ) -> bool:
     if way in {'ghci', 'ghci-opt', 'ghci-ext'}:
         return config.have_RTS_linker
     if way == 'ghci-ext-prof':
-        return config.have_RTS_linker and config.have_profiling
+        return config.have_RTS_linker and config.have_profiling and not arch('wasm32')
     return True
 
 def extra_ways( ways: List[WayName] ):
