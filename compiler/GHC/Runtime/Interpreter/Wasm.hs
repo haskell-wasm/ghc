@@ -61,13 +61,15 @@ spawnWasmInterp WasmInterpConfig {..} = do
   hSetBuffering wh NoBuffering
   hSetBuffering rh NoBuffering
   lo_ref <- newIORef Nothing
+  lock <- newMVar ()
   pending_frees <- newMVar []
   pure
     $ ExtInterpInstance
       { instProcess =
           InterpProcess
             { interpHandle = ph,
-              interpPipe = Pipe {pipeRead = rh, pipeWrite = wh, pipeLeftovers = lo_ref}
+              interpPipe = Pipe {pipeRead = rh, pipeWrite = wh, pipeLeftovers = lo_ref},
+              interpLock = lock
             },
         instPendingFrees = pending_frees,
         instExtra = ()

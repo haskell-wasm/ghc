@@ -26,8 +26,6 @@
 // library. There's no code unloading logic. The retain_cafs flag is
 // ignored and revertCAFs is a no-op.
 //
-// ghc -j doesn't work yet (#25285).
-//
 // *** What are implications to end users?
 //
 // Even if you intend to compile fully static wasm modules, you must

@@ -90,6 +90,7 @@ type WasmInterp = ExtInterpState WasmInterpConfig ()
 data InterpProcess = InterpProcess
   { interpPipe   :: !Pipe           -- ^ Pipe to communicate with the server
   , interpHandle :: !ProcessHandle  -- ^ Process handle of the server
+  , interpLock   :: !(MVar ())      -- ^ Lock to prevent concurrent access to the stream
   }
 
 -- | Status of an external interpreter
@@ -111,7 +112,6 @@ data IServConfig = IServConfig
 data ExtInterpInstance c = ExtInterpInstance
   { instProcess       :: {-# UNPACK #-} !InterpProcess
       -- ^ External interpreter process and its pipe (communication channel)
-
   , instPendingFrees  :: !(MVar [HValueRef])
       -- ^ Values that need to be freed before the next command is sent.
       -- Finalizers for ForeignRefs can append values to this list
