@@ -34,4 +34,3 @@ test('ipeEventLog_fromMap',
        when(opsys('darwin'), fragile(0))
      ],
      compile_and_run, ['ipe_lib.c'])
-
