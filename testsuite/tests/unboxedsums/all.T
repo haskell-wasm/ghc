@@ -59,6 +59,7 @@ test('T22208', normal, compile, ['-dstg-lint -dcmm-lint'])
 test('ManyUbxSums',
      [ pre_cmd('{compiler} --run ./GenManyUbxSums.hs'),
        extra_files(['GenManyUbxSums.hs', 'ManyUbxSums_Addr.hs']),
+       req_interp
      ],
      multi_compile_and_run,
      ['ManyUbxSums',
