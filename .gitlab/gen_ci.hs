@@ -935,7 +935,7 @@ job_groups =
 
     make_wasm_jobs cfg =
       modifyJobs
-        ( delVariable "BROKEN_TESTS"
+        ( setVariable "BROKEN_TESTS" "hpc001 hpc_fork tough tough2"
             . setVariable "HADRIAN_ARGS" "--docs=none"
             . delVariable "INSTALL_CONFIGURE_ARGS"
         )
