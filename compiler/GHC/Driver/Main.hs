@@ -226,6 +226,7 @@ import GHC.Unit.Module.Deps
 import GHC.Unit.Module.Status
 import GHC.Unit.Home.ModInfo
 
+import GHC.Types.Basic
 import GHC.Types.Id
 import GHC.Types.SourceError
 import GHC.Types.SafeHaskell
@@ -2330,7 +2331,7 @@ hscParsedDecls hsc_env decls = runInteractiveHsc hsc_env $ do
 
     {- Desugar it -}
     -- We use a basically null location for iNTERACTIVE
-    let iNTERACTIVELoc = ModLocation{ ml_hs_file   = Nothing,
+    let iNTERACTIVELoc = ModLocation{ ml_hs_file   = Just "Interactive",
                                       ml_hi_file   = panic "hsDeclsWithLocation:ml_hi_file",
                                       ml_obj_file  = panic "hsDeclsWithLocation:ml_obj_file",
                                       ml_dyn_obj_file = panic "hsDeclsWithLocation:ml_dyn_obj_file",
@@ -2347,47 +2348,36 @@ hscParsedDecls hsc_env decls = runInteractiveHsc hsc_env $ do
     (tidy_cg, mod_details) <- liftIO $ hscTidy hsc_env simpl_mg
 
     let !CgGuts{ cg_module    = this_mod,
-                 cg_binds     = core_binds,
-                 cg_tycons    = tycons,
-                 cg_modBreaks = mod_breaks } = tidy_cg
+                 cg_binds     = core_binds
+                 } = tidy_cg
 
         !ModDetails { md_insts     = cls_insts
                     , md_fam_insts = fam_insts } = mod_details
             -- Get the *tidied* cls_insts and fam_insts
 
-        data_tycons = filter isDataTyCon tycons
-
-    {- Prepare For Code Generation -}
-    -- Do saturation and convert to A-normal form
-    prepd_binds <- {-# SCC "CorePrep" #-} liftIO $ do
-      cp_cfg <- initCorePrepConfig hsc_env
-      corePrepPgm
-        (hsc_logger hsc_env)
-        cp_cfg
-        (initCorePrepPgmConfig (hsc_dflags hsc_env) (interactiveInScope $ hsc_IC hsc_env))
-        this_mod iNTERACTIVELoc core_binds data_tycons
-
-    (stg_binds_with_deps, _infotable_prov, _caf_ccs__caf_cc_stacks, _stg_cg_info)
-        <- {-# SCC "CoreToStg" #-}
-           liftIO $ myCoreToStg (hsc_logger hsc_env)
-                                (hsc_dflags hsc_env)
-                                (interactiveInScope (hsc_IC hsc_env))
-                                True
-                                this_mod
-                                iNTERACTIVELoc
-                                prepd_binds
-
-    let (stg_binds,_stg_deps) = unzip stg_binds_with_deps
-
-    {- Generate byte code -}
-    cbc <- liftIO $ byteCodeGen hsc_env this_mod
-                                stg_binds data_tycons mod_breaks
+    {- Generate byte code & load foreign stubs -}
+    (cbc, spt_entries) <- liftIO $ do
+      (BCOs cbc spt_entries):fos <- generateByteCode hsc_env (mkCgInteractiveGuts tidy_cg) iNTERACTIVELoc
+      case NE.nonEmpty fos of
+        Just nefos -> modifyLoaderState_ interp $ \pls -> do
+          mtime <- getModificationUTCTime $ nameOfObject $ NE.head nefos
+          (pls1, ok_flag) <- loadObjects interp hsc_env pls
+            [ LM
+                { linkableTime = mtime,
+                  linkableModule = this_mod,
+                  linkableUnlinked = NE.toList nefos
+                } ]
+          if succeeded ok_flag
+            then pure pls1
+            else panic "could not load foreign stubs for interactive module"
+        Nothing -> pure ()
+      pure (cbc, spt_entries)
 
     let src_span = srcLocSpan interactiveSrcLoc
     _ <- liftIO $ loadDecls interp hsc_env src_span cbc
 
     {- Load static pointer table entries -}
-    liftIO $ hscAddSptEntries hsc_env (cg_spt_entries tidy_cg)
+    liftIO $ hscAddSptEntries hsc_env spt_entries
 
     let tcs = filterOut isImplicitTyCon (mg_tcs simpl_mg)
         patsyns = mg_patsyns simpl_mg
