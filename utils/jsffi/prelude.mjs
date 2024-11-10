@@ -51,30 +51,35 @@ export const setImmediate = (() => {
     return (cb, ...args) => scheduler.postTask(() => cb(...args));
   }
 
-  // A simple & fast setImmediate() implementation for browsers. It's
-  // not a drop-in replacement for node.js setImmediate() because:
-  // 1. There's no clearImmediate(), and setImmediate() doesn't return
-  //    anything
-  // 2. There's no guarantee that callbacks scheduled by setImmediate()
-  //    are executed in the same order (in fact it's the opposite lol),
-  //    but you are never supposed to rely on this assumption anyway
-  class SetImmediate {
-    #fs = [];
-    #mc = new MessageChannel();
+  // Cloudflare workers doesn't support MessageChannel
+  if (globalThis.MessageChannel) {
+    // A simple & fast setImmediate() implementation for browsers. It's
+    // not a drop-in replacement for node.js setImmediate() because:
+    // 1. There's no clearImmediate(), and setImmediate() doesn't return
+    //    anything
+    // 2. There's no guarantee that callbacks scheduled by setImmediate()
+    //    are executed in the same order (in fact it's the opposite lol),
+    //    but you are never supposed to rely on this assumption anyway
+    class SetImmediate {
+      #fs = [];
+      #mc = new MessageChannel();
 
-    constructor() {
-      this.#mc.port1.addEventListener("message", () => {
-        this.#fs.pop()();
-      });
-      this.#mc.port1.start();
+      constructor() {
+        this.#mc.port1.addEventListener("message", () => {
+          this.#fs.pop()();
+        });
+        this.#mc.port1.start();
+      }
+
+      setImmediate(cb, ...args) {
+        this.#fs.push(() => cb(...args));
+        this.#mc.port2.postMessage(undefined);
+      }
     }
 
-    setImmediate(cb, ...args) {
-      this.#fs.push(() => cb(...args));
-      this.#mc.port2.postMessage(undefined);
-    }
+    const sm = new SetImmediate();
+    return (cb, ...args) => sm.setImmediate(cb, ...args);
   }
 
-  const sm = new SetImmediate();
-  return (cb, ...args) => sm.setImmediate(cb, ...args);
+  return (cb, ...args) => setTimeout(cb, 0, ...args);
 })();
