@@ -117,7 +117,7 @@ data LinuxDistro
   | Ubuntu1804
   | Centos7
   | Alpine312
-  | Alpine322
+  | Alpine323
   | AlpineWasm
   | Rocky8
   deriving (Eq)
@@ -315,8 +315,8 @@ distroName Ubuntu2004 = "ubuntu20_04"
 distroName Ubuntu2204 = "ubuntu22_04"
 distroName Centos7    = "centos7"
 distroName Alpine312  = "alpine3_12"
-distroName Alpine322  = "alpine3_22"
-distroName AlpineWasm = "alpine3_22-wasm"
+distroName Alpine323  = "alpine3_23"
+distroName AlpineWasm = "alpine3_23-wasm"
 distroName Rocky8     = "rocky8"
 
 opsysName :: Opsys -> String
@@ -471,7 +471,7 @@ alpineVariables arch = mconcat $
 
 distroVariables :: Arch -> LinuxDistro -> Variables
 distroVariables arch Alpine312 = alpineVariables arch
-distroVariables arch Alpine322 = alpineVariables arch
+distroVariables arch Alpine323 = alpineVariables arch
 distroVariables _ Centos7 = mconcat [
     "HADRIAN_ARGS" =: "--docs=no-sphinx"
   , "BROKEN_TESTS" =: "T22012" -- due to #23979
@@ -1105,8 +1105,8 @@ alpine_x86 =
     fullyStaticBrokenTests (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken static))
   , fullyStaticBrokenTests (disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) staticNativeInt)))
   -- Dynamically linked build, suitable for building your own static executables on alpine
-  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine322) (splitSectionsBroken vanilla))
-  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine322) (splitSectionsBroken vanilla))
+  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine323) (splitSectionsBroken vanilla))
+  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine323) (splitSectionsBroken vanilla))
   ]
   where
     -- ghcilink002 broken due to #17869
@@ -1117,7 +1117,7 @@ alpine_x86 =
 
 alpine_aarch64 :: [JobGroup Job]
 alpine_aarch64 = [
-  disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine322) (splitSectionsBroken vanilla))
+  disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine323) (splitSectionsBroken vanilla))
   ]
 
 cross_jobs :: [JobGroup Job]
@@ -1134,15 +1134,43 @@ cross_jobs = [
       make_wasm_jobs wasm_build_config {bignumBackend = Native}
   , modifyValidateJobs manual $
       make_wasm_jobs wasm_build_config {unregisterised = True}
+  , wasm_aarch64_linux_jobs
+  , wasm_aarch64_darwin_jobs
+  , wasm_x64_darwin_jobs
   ]
   where
     javascriptConfig = (crossConfig "javascript-unknown-ghcjs" (Emulator "js-emulator") (Just "emconfigure"))
                          { bignumBackend = Native }
 
+    wasm_aarch64_linux_jobs =
+      modifyJobs
+        ( delVariable "BROKEN_TESTS"
+          . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend
+        $ validateBuilds AArch64 (Linux Alpine323) wasm_build_config
+
+    wasm_aarch64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend $ validateBuilds AArch64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
+    wasm_x64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend $ validateBuilds Amd64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
     make_wasm_jobs cfg =
       modifyJobs
         ( delVariable "BROKEN_TESTS"
-            . setVariable "HADRIAN_ARGS" "--docs=none"
+            . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
             . delVariable "INSTALL_CONFIGURE_ARGS"
         )
         $ addValidateRule WasmBackend $ validateBuilds Amd64 (Linux AlpineWasm) cfg
@@ -1193,10 +1221,10 @@ platform_mapping = Map.map go combined_result
                 , "x86_64-linux-deb11-cross_aarch64-linux-gnu-validate"
                 , "x86_64-windows-validate"
                 , "aarch64-linux-deb12-validate"
-                , "nightly-x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
+                , "nightly-x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
                 , "nightly-x86_64-linux-deb11-validate"
                 , "nightly-x86_64-linux-deb12-validate"
-                , "x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
+                , "x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
                 , "x86_64-linux-deb12-validate+thread_sanitizer_cmm"
                 , "nightly-aarch64-linux-deb10-validate"
                 , "nightly-aarch64-linux-deb12-validate"
