@@ -126,7 +126,7 @@ data LinuxDistro
   | Ubuntu2004
   | Ubuntu1804
   | Alpine312
-  | Alpine322
+  | Alpine323
   | AlpineWasm
   | Rocky8
   deriving (Eq)
@@ -327,8 +327,8 @@ distroName Ubuntu2004    = "ubuntu20_04"
 distroName Ubuntu2204    = "ubuntu22_04"
 distroName Ubuntu2404    = "ubuntu24_04"
 distroName Alpine312     = "alpine3_12"
-distroName Alpine322     = "alpine3_22"
-distroName AlpineWasm    = "alpine3_22-wasm"
+distroName Alpine323     = "alpine3_23"
+distroName AlpineWasm    = "alpine3_23-wasm"
 distroName Rocky8        = "rocky8"
 
 opsysName :: Opsys -> String
@@ -500,7 +500,7 @@ alpineVariables arch = mconcat $
 
 distroVariables :: Arch -> LinuxDistro -> Variables
 distroVariables arch Alpine312 = alpineVariables arch
-distroVariables arch Alpine322 = alpineVariables arch
+distroVariables arch Alpine323 = alpineVariables arch
 distroVariables _    Fedora33  = mconcat
   -- LLC/OPT do not work for some reason in our fedora images
   -- These tests fail with this error: T11649 T5681 T7571 T8131b
@@ -1241,8 +1241,8 @@ alpine_x86 =
     fullyStaticBrokenTests (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken static))
   , fullyStaticBrokenTests (disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) staticNativeInt)))
     -- Dynamically linked build, suitable for building your own static executables on alpine
-  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine322) (splitSectionsBroken vanilla))
-  , standardBuildsWithConfig I386 (Linux Alpine322) (splitSectionsBroken vanilla)
+  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine323) (splitSectionsBroken vanilla))
+  , standardBuildsWithConfig I386 (Linux Alpine323) (splitSectionsBroken vanilla)
   ]
   where
     -- ghcilink002 broken due to #17869
@@ -1253,7 +1253,7 @@ alpine_x86 =
 
 alpine_aarch64 :: [JobGroup Job]
 alpine_aarch64 = [
-  disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine322) (splitSectionsBroken vanilla))
+  disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine323) (splitSectionsBroken vanilla))
   ]
 
 cross_jobs :: [JobGroup Job]
@@ -1284,6 +1284,9 @@ cross_jobs = [
   , makeWinArmJobs
       $ addValidateRule WinArm64LLVM
         (validateBuilds AArch64 (Linux Debian12Wine) (winAarch64Config {llvmBootstrap = True}))
+  , wasm_aarch64_linux_jobs
+  , wasm_aarch64_darwin_jobs
+  , wasm_x64_darwin_jobs
   ]
   where
     javascriptConfig = (crossConfig "javascript-unknown-ghcjs" (Emulator "js-emulator") (Just "emconfigure"))
@@ -1321,10 +1324,34 @@ cross_jobs = [
     winAarch64Config = (crossConfig "aarch64-unknown-mingw32" (Emulator "/opt/wine-arm64ec-msys2-deb12/bin/wine") Nothing)
                          { bignumBackend = Native }
 
+    wasm_aarch64_linux_jobs =
+      modifyJobs
+        ( delVariable "BROKEN_TESTS"
+          . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend
+        $ validateBuilds AArch64 (Linux Alpine323) wasm_build_config
+
+    wasm_aarch64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend $ validateBuilds AArch64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
+    wasm_x64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend $ validateBuilds Amd64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
     make_wasm_jobs cfg =
       modifyJobs
-        ( -- See Note [Testing wasm ghci browser mode]
-          setVariable "FIREFOX_LAUNCH_OPTS" "{\"browser\":\"firefox\",\"executablePath\":\"/usr/bin/firefox\"}"
+        ( delVariable "BROKEN_TESTS"
             . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
             . delVariable "INSTALL_CONFIGURE_ARGS"
         )
@@ -1380,10 +1407,10 @@ platform_mapping = Map.map go combined_result
                 , "x86_64-windows-validate"
                 , "aarch64-linux-deb12-validate"
                 , "aarch64-linux-deb12-wine-int_native-cross_aarch64-unknown-mingw32-validate"
-                , "nightly-x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
+                , "nightly-x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
                 , "nightly-x86_64-linux-deb11-validate"
                 , "nightly-x86_64-linux-deb12-validate"
-                , "x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
+                , "x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
                 , "x86_64-linux-deb12-validate+thread_sanitizer_cmm"
                 , "nightly-aarch64-linux-deb10-validate"
                 , "nightly-aarch64-linux-deb12-validate"
