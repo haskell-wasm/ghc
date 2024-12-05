@@ -235,7 +235,45 @@ function set_toolchain_paths() {
   export ALEX
 
   if [[ "${CROSS_TARGET:-}" == *"wasm"* ]]; then
-    source "/home/ghc/.ghc-wasm/env"
+    case "$(uname)" in
+      Linux)
+        if [[ ! -f /home/ghc/.ghc-wasm/.flag ]]; then
+          sudo sed -i -e 's/v3\.[0-9][0-9]/v3\.21/g' /etc/apk/repositories
+          sudo apk upgrade --available --update-cache
+
+          curl -f -L --retry 5 https://github.com/tweag/rust-alpine-mimalloc/archive/refs/heads/master.tar.gz | tar xz -C /tmp
+          mv /tmp/rust-alpine-mimalloc-master/mimalloc.diff /tmp
+          sudo /tmp/rust-alpine-mimalloc-master/build.sh
+
+          pushd "$(mktemp -d)"
+          curl -f -L --retry 5 https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/archive/$GHC_WASM_META_BRANCH/ghc-wasm-meta-$GHC_WASM_META_BRANCH.tar.gz | tar xz --strip-components=1
+          PREFIX=/home/ghc/.ghc-wasm SKIP_GHC=1 ./setup.sh
+          popd
+
+          touch /home/ghc/.ghc-wasm/.flag
+        fi
+
+        export LD_PRELOAD=/usr/lib/libmimalloc.so
+        source /home/ghc/.ghc-wasm/env
+
+        if [[ "$(uname -m)" == "aarch64" ]]; then
+          export CONFIGURE_ARGS="--host=aarch64-alpine-linux --target=wasm32-wasi --with-intree-gmp --with-system-libffi"
+        fi
+        ;;
+
+      Darwin)
+        pushd "$(mktemp -d)"
+        curl -f -L --retry 5 https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/archive/$GHC_WASM_META_BRANCH/ghc-wasm-meta-$GHC_WASM_META_BRANCH.tar.gz | tar xz --strip-components=1
+        PREFIX=/Users/$(whoami)/.ghc-wasm SKIP_GHC=1 ./setup.sh
+        popd
+
+        source /Users/$(whoami)/.ghc-wasm/env
+        ;;
+
+      *)
+        fail "wasm target only supported on linux/darwin hosts"
+        ;;
+    esac
   fi
 }
 
