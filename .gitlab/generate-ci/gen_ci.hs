@@ -114,7 +114,7 @@ data LinuxDistro
   | Ubuntu2004
   | Ubuntu1804
   | Alpine312
-  | Alpine322
+  | Alpine323
   | AlpineWasm
   | Rocky8
   deriving (Eq)
@@ -152,6 +152,7 @@ data BuildConfig
                 , threadSanitiser :: Bool
                 , noSplitSections :: Bool
                 , validateNonmovingGc :: Bool
+                , textWithSIMDUTF :: Bool
                 }
 
 -- Extra arguments to pass to ./configure due to the BuildConfig
@@ -174,7 +175,8 @@ mkJobFlavour BuildConfig{..} = Flavour buildFlavour opts
            [HostFullyStatic | hostFullyStatic] ++
            [ThreadSanitiser | threadSanitiser] ++
            [NoSplitSections | noSplitSections, buildFlavour == Release ] ++
-           [BootNonmovingGc | validateNonmovingGc ]
+           [BootNonmovingGc | validateNonmovingGc ] ++
+           [TextWithSIMDUTF | textWithSIMDUTF]
 
 data Flavour = Flavour BaseFlavour [FlavourTrans]
 
@@ -186,6 +188,7 @@ data FlavourTrans =
     | ThreadSanitiser
     | NoSplitSections
     | BootNonmovingGc
+    | TextWithSIMDUTF
 
 data BaseFlavour = Release | Validate | SlowValidate deriving Eq
 
@@ -213,6 +216,7 @@ vanilla = BuildConfig
   , threadSanitiser = False
   , noSplitSections = False
   , validateNonmovingGc = False
+  , textWithSIMDUTF = False
   }
 
 splitSectionsBroken :: BuildConfig -> BuildConfig
@@ -297,8 +301,8 @@ distroName Fedora38  = "fedora38"
 distroName Ubuntu1804 = "ubuntu18_04"
 distroName Ubuntu2004 = "ubuntu20_04"
 distroName Alpine312  = "alpine3_12"
-distroName Alpine322  = "alpine3_22"
-distroName AlpineWasm = "alpine3_22-wasm"
+distroName Alpine323  = "alpine3_23"
+distroName AlpineWasm = "alpine3_23-wasm"
 distroName Rocky8     = "rocky8"
 
 opsysName :: Opsys -> String
@@ -345,6 +349,7 @@ flavourString (Flavour base trans) = base_string base ++ concatMap (("+" ++) . f
     flavour_string ThreadSanitiser = "thread_sanitizer_cmm"
     flavour_string NoSplitSections = "no_split_sections"
     flavour_string BootNonmovingGc = "boot_nonmoving_gc"
+    flavour_string TextWithSIMDUTF = "text_simdutf"
 
 -- The path to the docker image (just for linux builders)
 dockerImage :: Arch -> Opsys -> Maybe String
@@ -447,7 +452,7 @@ alpineVariables = mconcat
 
 distroVariables :: LinuxDistro -> Variables
 distroVariables Alpine312 = alpineVariables
-distroVariables Alpine322 = alpineVariables
+distroVariables Alpine323 = alpineVariables
 distroVariables Fedora33 = mconcat
   -- LLC/OPT do not work for some reason in our fedora images
   -- These tests fail with this error: T11649 T5681 T7571 T8131b
@@ -1005,8 +1010,8 @@ job_groups =
      , fullyStaticBrokenTests (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken static))
      -- Dynamically linked build, suitable for building your own static executables on alpine
      , disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken vanilla)))
-     , disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine322) (splitSectionsBroken vanilla))
-     , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine322) (splitSectionsBroken vanilla))
+     , disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine323) (splitSectionsBroken vanilla))
+     , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine323) (splitSectionsBroken vanilla))
      , fullyStaticBrokenTests (disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) staticNativeInt)))
      , validateBuilds Amd64 (Linux Debian11) (crossConfig "aarch64-linux-gnu" (Emulator "qemu-aarch64 -L /usr/aarch64-linux-gnu") Nothing)
 
@@ -1017,6 +1022,9 @@ job_groups =
          make_wasm_jobs wasm_build_config {bignumBackend = Native}
      , modifyValidateJobs manual $
          make_wasm_jobs wasm_build_config {unregisterised = True}
+     , wasm_aarch64_linux_jobs
+     , wasm_aarch64_darwin_jobs
+     , wasm_x64_darwin_jobs
      , onlyRule NonmovingGc (validateBuilds Amd64 (Linux Debian11) vanilla {validateNonmovingGc = True})
      , onlyRule IpeData (validateBuilds Amd64 (Linux Debian10) zstdIpe)
      ]
@@ -1041,10 +1049,34 @@ job_groups =
         . addVariable "HADRIAN_ARGS" "--docs=none") $
       validateBuilds Amd64 (Linux Debian12) tsan
 
+    wasm_aarch64_linux_jobs =
+      modifyJobs
+        ( delVariable "BROKEN_TESTS"
+          . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ validateBuilds AArch64 (Linux Alpine323) wasm_build_config
+
+    wasm_aarch64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ validateBuilds AArch64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
+    wasm_x64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ validateBuilds Amd64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
     make_wasm_jobs cfg =
       modifyJobs
         ( delVariable "BROKEN_TESTS"
-            . setVariable "HADRIAN_ARGS" "--docs=none"
+            . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
             . delVariable "INSTALL_CONFIGURE_ARGS"
         )
         $ addValidateRule WasmBackend $ validateBuilds Amd64 (Linux AlpineWasm) cfg
@@ -1054,6 +1086,7 @@ job_groups =
         {
           hostFullyStatic = True
           , buildFlavour     = Release -- TODO: This needs to be validate but wasm backend doesn't pass yet
+          , textWithSIMDUTF = True
         }
 
 
@@ -1079,10 +1112,10 @@ platform_mapping = Map.map go combined_result
                 , "x86_64-linux-fedora33-release"
                 , "x86_64-linux-deb11-cross_aarch64-linux-gnu-validate"
                 , "x86_64-windows-validate"
-                , "nightly-x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static"
+                , "nightly-x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static"
                 , "nightly-x86_64-linux-deb11-validate"
                 , "nightly-x86_64-linux-deb12-validate"
-                , "x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static"
+                , "x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static"
                 , "x86_64-linux-deb12-validate+thread_sanitizer_cmm"
                 , "nightly-aarch64-linux-deb10-validate"
                 , "nightly-x86_64-linux-alpine3_12-validate"
