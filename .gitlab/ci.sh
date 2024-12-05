@@ -230,7 +230,43 @@ function set_toolchain_paths() {
   export ALEX
 
   if [[ "${CROSS_TARGET:-}" == *"wasm"* ]]; then
-    source "/home/ghc/.ghc-wasm/env"
+    case "$(uname)" in
+      Linux)
+        if [[ ! -f /home/ghc/.ghc-wasm/.flag ]]; then
+          sudo apk upgrade --available --update-cache
+          sudo apk add firefox
+
+          pushd "$(mktemp -d)"
+          curl -f -L --retry 5 https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/archive/$GHC_WASM_META_BRANCH/ghc-wasm-meta-$GHC_WASM_META_BRANCH.tar.gz | tar xz --strip-components=1
+          PREFIX=/home/ghc/.ghc-wasm SKIP_GHC=1 ./setup.sh
+          popd
+
+          touch /home/ghc/.ghc-wasm/.flag
+        fi
+
+        source /home/ghc/.ghc-wasm/env
+        export FIREFOX_LAUNCH_OPTS='{"browser":"firefox","executablePath":"/usr/bin/firefox"}'
+        if [[ "$(uname -m)" == "aarch64" ]]; then
+          export CONFIGURE_ARGS="--host=aarch64-alpine-linux --target=wasm32-wasi --with-intree-gmp --with-system-libffi"
+        fi
+        ;;
+
+      Darwin)
+        if [[ ! -d /tmp/ghc-wasm-ci-$CI_JOB_ID/.ghc-wasm ]]; then
+          pushd "$(mktemp -d)"
+          curl -f -L --retry 5 https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/archive/$GHC_WASM_META_BRANCH/ghc-wasm-meta-$GHC_WASM_META_BRANCH.tar.gz | tar xz --strip-components=1
+          PREFIX=/tmp/ghc-wasm-ci-$CI_JOB_ID/.ghc-wasm SKIP_GHC=1 ./setup.sh
+          popd
+        fi
+
+        source /tmp/ghc-wasm-ci-$CI_JOB_ID/.ghc-wasm/env
+        export FIREFOX_LAUNCH_OPTS='{"browser":"firefox","executablePath":"/Applications/Firefox.app/Contents/MacOS/firefox"}'
+        ;;
+
+      *)
+        fail "wasm target only supported on linux/darwin hosts"
+        ;;
+    esac
   fi
 }
 
@@ -521,6 +557,8 @@ function build_hadrian() {
   if [[ "${CI_JOB_NAME:-}" != *"i386"* ]]; then
     export XZ_OPT="${XZ_OPT:-} -T$cores"
   fi
+
+  export WASM_SO_OPT="--debuginfo --low-memory-unused --strip-dwarf -O2"
 
   if [[ -n "${REINSTALL_GHC:-}" ]]; then
     run_hadrian build-cabal -V

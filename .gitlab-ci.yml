@@ -11,7 +11,9 @@ variables:
   GIT_SSL_NO_VERIFY: "1"
 
   # Commit of ghc/ci-images repository from which to pull Docker images
-  DOCKER_REV: be4ac2cd18f38e63b263e2a27c76a7c279385796
+  DOCKER_REV: 7c514a3eaeab072e8789173e583a6ce5b26f0685
+
+  GHC_WASM_META_BRANCH: master
 
   # Sequential version number of all cached things.
   # Bump to invalidate GitLab CI cache.
@@ -55,7 +57,7 @@ variables:
   #     -1            37.72s  142 MB
   #     -0            34.40s  156 MB
   #
-  XZ_OPT: "-1"
+  XZ_OPT: "-9e"
 default:
   interruptible: true
 
@@ -111,6 +113,7 @@ workflow:
     - if: $CI_PROJECT_ID == "1" && $CI_COMMIT_BRANCH == "master"
     - if: $CI_PROJECT_ID == "1" && $CI_COMMIT_BRANCH =~ /ghc-[0-9]+\.[0-9]+/
     - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
 
 # which versions of GHC to allow bootstrap with
 .bootstrap_matrix : &bootstrap_matrix
@@ -243,30 +246,6 @@ ghc-linters:
     - if: $CI_MERGE_REQUEST_ID
     - *drafts-can-fail-lint
 
-# Run mypy Python typechecker on linter scripts.
-lint-linters:
-  image: "registry.gitlab.haskell.org/ghc/ci-images/linters:$DOCKER_REV"
-  extends: .lint
-  script:
-    - mypy testsuite/tests/linters/regex-linters/*.py
-  dependencies: []
-
-# Check that .T files all parse by listing broken tests.
-lint-testsuite:
-  image: "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-deb9:$DOCKER_REV"
-  extends: .lint
-  script:
-    - make -Ctestsuite list_broken TEST_HC=$GHC
-  dependencies: []
-
-# Run mypy Python typechecker on testsuite driver
-typecheck-testsuite:
-  image: "registry.gitlab.haskell.org/ghc/ci-images/linters:$DOCKER_REV"
-  extends: .lint
-  script:
-    - mypy testsuite/driver/runtests.py
-  dependencies: []
-
 # We allow the submodule checker to fail when run on merge requests (to
 # accommodate, e.g., haddock changes not yet upstream) but not on `master` or
 # Marge jobs.
@@ -303,67 +282,6 @@ lint-author:
     - if: $CI_MERGE_REQUEST_ID
     - *drafts-can-fail-lint
 
-lint-ci-config:
-  image: nixos/nix:2.25.2
-  extends: .lint
-  # We don't need history/submodules in this job
-  variables:
-    GIT_DEPTH: 1
-    GIT_SUBMODULE_STRATEGY: none
-  before_script:
-    - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
-    # Note [Nix-in-Docker]
-    # ~~~~~~~~~~~~~~~~~~~~
-    # The nixos/nix default config is max-jobs=1 and cores=$(logical
-    # cores num) which doesn't play nice with our $CPUS convention. We
-    # fix it before invoking any nix build to avoid oversubscribing
-    # while allowing a reasonable degree of parallelism.
-    # FIXME: Disabling build-users-group=nixbld is a workaround for a Nix-in-Docker issue. See
-    # https://gitlab.haskell.org/ghc/head.hackage/-/issues/38#note_560487 for
-    # discussion.
-    - echo "cores = $CPUS" >> /etc/nix/nix.conf
-    - echo "max-jobs = $CPUS" >> /etc/nix/nix.conf
-    - nix run nixpkgs#gnused -- -i -e 's/ nixbld//' /etc/nix/nix.conf
-  script:
-    - nix run .gitlab/generate-ci#generate-jobs
-    # 1 if .gitlab/generate_jobs changed the output of the generated config
-    - nix shell nixpkgs#git -c git diff --exit-code
-    # And run this to generate the .gitlab/jobs-metadata.json
-    - nix run .gitlab/generate-ci#generate-job-metadata
-  artifacts:
-    when: always
-    paths:
-      - .gitlab/jobs-metadata.json
-      - .gitlab/jobs.yaml
-  dependencies: []
-
-lint-submods:
-  extends: .lint-submods
-  # Allow failure on merge requests since any necessary submodule patches may
-  # not be upstreamed yet.
-  rules:
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*marge_bot_batch_merge_job.*/'
-      allow_failure: false
-    # Don't run on nightly because the program needs a base commit to check.
-    - if: $NIGHTLY
-      when: never
-    - allow_failure: true
-
-lint-submods-branch:
-  extends: .lint-submods
-  variables:
-    BUILD_FLAVOUR: default
-  script:
-    - .gitlab/ci.sh configure
-    - .gitlab/ci.sh run_hadrian stage0:exe:lint-submodule-refs
-    - "echo Linting submodule changes between $CI_COMMIT_BEFORE_SHA..$CI_COMMIT_SHA"
-    - git submodule foreach git remote update
-    - _build/stageBoot/bin/lint-submodule-refs . $(git rev-list $CI_COMMIT_BEFORE_SHA..$CI_COMMIT_SHA)
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
-    - if: '$CI_COMMIT_BRANCH =~ /ghc-[0.9]+\.[0-9]+/'
-    - *drafts-can-fail-lint
-
 ############################################################
 # GHC source code linting
 ############################################################
@@ -394,9 +312,7 @@ lint-submods-branch:
 hadrian-ghc-in-ghci:
   stage: quick-build
   needs:
-    - job: lint-linters
-    - job: lint-submods
-      optional: true
+    - only-wasm
   image: "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-deb12:$DOCKER_REV"
   before_script:
     # workaround for docker permissions
@@ -481,21 +397,6 @@ hadrian-multi:
       - cabal-cache
   rules:
     - *full-ci
-
-############################################################
-# stack-hadrian-build
-############################################################
-
-# Verify that Hadrian builds with stack. Note that we don't actually perform a
-# build of GHC itself; we merely test that the Hadrian executable builds and
-# works (by invoking `hadrian --version`).
-stack-hadrian-build:
-  extends: hadrian-ghc-in-ghci
-  stage: quick-build
-  script:
-    - . .gitlab/ci.sh setup
-    - . .gitlab/ci.sh configure
-    - hadrian/build-stack --version
 
 ####################################
 # Testing reinstallable ghc codepath
@@ -1078,29 +979,29 @@ abi-test:
 ghc-wasm-meta-gmp:
   extends: .ghc-wasm-meta
   needs:
-    - job: x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+    - job: x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf
       artifacts: false
   variables:
     UPSTREAM_GHC_FLAVOUR: gmp
-    UPSTREAM_GHC_JOB_NAME: x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+    UPSTREAM_GHC_JOB_NAME: x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf
 
 ghc-wasm-meta-native:
   extends: .ghc-wasm-meta
   needs:
-    - job: x86_64-linux-alpine3_22-wasm-int_native-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+    - job: x86_64-linux-alpine3_23-wasm-int_native-cross_wasm32-wasi-release+host_fully_static+text_simdutf
       artifacts: false
   variables:
     UPSTREAM_GHC_FLAVOUR: native
-    UPSTREAM_GHC_JOB_NAME: x86_64-linux-alpine3_22-wasm-int_native-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+    UPSTREAM_GHC_JOB_NAME: x86_64-linux-alpine3_23-wasm-int_native-cross_wasm32-wasi-release+host_fully_static+text_simdutf
 
 ghc-wasm-meta-unreg:
   extends: .ghc-wasm-meta
   needs:
-    - job: x86_64-linux-alpine3_22-wasm-unreg-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+    - job: x86_64-linux-alpine3_23-wasm-unreg-cross_wasm32-wasi-release+host_fully_static+text_simdutf
       artifacts: false
   variables:
     UPSTREAM_GHC_FLAVOUR: unreg
-    UPSTREAM_GHC_JOB_NAME: x86_64-linux-alpine3_22-wasm-unreg-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+    UPSTREAM_GHC_JOB_NAME: x86_64-linux-alpine3_23-wasm-unreg-cross_wasm32-wasi-release+host_fully_static+text_simdutf
 
 ############################################################
 # Documentation deployment via GitLab Pages
@@ -1142,30 +1043,9 @@ pages:
 # Generation of GHCUp metadata
 #############################################################
 
-
-project-version:
-  stage: packaging
-  image: "registry.gitlab.haskell.org/ghc/ci-images/x86_64-linux-deb12:$DOCKER_REV"
-  tags:
-    - x86_64-linux
-  variables:
-    BUILD_FLAVOUR: default
-  script:
-    # Calculate the project version
-    - sudo chown ghc:ghc -R .
-    - .gitlab/ci.sh setup
-    - .gitlab/ci.sh configure
-    - echo "ProjectVersion=$(cat VERSION)" > version.sh
-
-  needs: []
-  dependencies: []
-  artifacts:
-    paths:
-      - version.sh
-
 .ghcup-metadata:
   stage: deploy
-  image: nixos/nix:2.25.2
+  image: ghcr.io/nixos/nix
   dependencies: null
   tags:
     - x86_64-linux
@@ -1216,7 +1096,7 @@ ghcup-metadata-nightly:
       artifacts: false
     - job: nightly-x86_64-windows-validate
       artifacts: false
-    - job: nightly-x86_64-linux-alpine3_22-validate
+    - job: nightly-x86_64-linux-alpine3_23-validate
       artifacts: false
     - job: nightly-x86_64-linux-deb9-validate
       artifacts: false
@@ -1224,7 +1104,7 @@ ghcup-metadata-nightly:
       artifacts: false
     - job: nightly-i386-linux-deb12-validate
       artifacts: false
-    - job: nightly-i386-linux-alpine3_22-validate
+    - job: nightly-i386-linux-alpine3_23-validate
       artifacts: false
     - job: nightly-x86_64-linux-deb10-validate
       artifacts: false
@@ -1236,11 +1116,10 @@ ghcup-metadata-nightly:
       artifacts: false
     - job: nightly-aarch64-linux-deb12-validate
       artifacts: false
-    - job: nightly-aarch64-linux-alpine3_22-validate
+    - job: nightly-aarch64-linux-alpine3_23-validate
       artifacts: false
     - job: source-tarball
       artifacts: false
-    - job: project-version
   script:
     - nix shell -f .gitlab/rel_eng -c ghcup-metadata --metadata ghcup-0.0.7.yaml --date="$(date -d $CI_PIPELINE_CREATED_AT +%Y-%m-%d)" --pipeline-id="$CI_PIPELINE_ID" --version="$ProjectVersion" > "metadata_test.yaml"
   rules:
@@ -1325,3 +1204,39 @@ ghcup-metadata-testing-release:
   rules:
     - if: '$RELEASE_JOB == "yes"'
   when: manual
+
+only-wasm:
+  stage: quick-build
+  image: ghcr.io/nixos/nix
+  tags:
+    - x86_64-linux
+  needs: []
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+    - echo "cores = $CPUS" >> /etc/nix/nix.conf
+    - echo "max-jobs = $CPUS" >> /etc/nix/nix.conf
+    - nix run nixpkgs#gnused -- -i -e 's/ nixbld//' /etc/nix/nix.conf
+  script:
+    - nix run nixpkgs#deno -- run --allow-env --allow-net https://gist.githubusercontent.com/TerrorJack/e0e886b87b9bfffb6c5fa5b3aeddcecc/raw/e0388cd2e398259f4bfe7ad2216b54c563d4360e/cancel.js
+
+ghc-wasm-meta-ci:
+  stage: testing
+  needs:
+    - job: x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+      artifacts: false
+  variables:
+    UPSTREAM_GHC_FLAVOUR: "9.14"
+    UPSTREAM_GHC_JOB_NAME: x86_64-linux-alpine3_23-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf
+    UPSTREAM_GHC_PIPELINE_ID: $CI_PIPELINE_ID
+    UPSTREAM_GHC_PROJECT_ID: $CI_PROJECT_ID
+  rules:
+    - if: $UPSTREAM_WASI_SDK_PIPELINE_ID != null
+      variables:
+        UPSTREAM_WASI_SDK_PIPELINE_ID: $UPSTREAM_WASI_SDK_PIPELINE_ID
+    - when: always
+  trigger:
+    project: haskell-wasm/ghc-wasm-meta
+    branch: $GHC_WASM_META_BRANCH
+    strategy: depend
