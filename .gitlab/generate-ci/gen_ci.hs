@@ -1286,6 +1286,9 @@ cross_jobs = [
   , makeWinArmJobs
       $ addValidateRule WinArm64LLVM
         (validateBuilds AArch64 (Linux Debian12Wine) (winAarch64Config {llvmBootstrap = True}))
+  , wasm_aarch64_linux_jobs
+  , wasm_aarch64_darwin_jobs
+  , wasm_x64_darwin_jobs
   ]
   where
     javascriptConfig = (crossConfig "javascript-unknown-ghcjs" (Emulator "js-emulator") (Just "emconfigure"))
@@ -1330,10 +1333,34 @@ cross_jobs = [
     winAarch64Config = (crossConfig "aarch64-unknown-mingw32" (Emulator "/opt/wine-arm64ec-msys2-deb12/bin/wine") Nothing)
                          { bignumBackend = Native }
 
+    wasm_aarch64_linux_jobs =
+      modifyJobs
+        ( delVariable "BROKEN_TESTS"
+          . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend
+        $ validateBuilds AArch64 (Linux Alpine323) wasm_build_config
+
+    wasm_aarch64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend $ validateBuilds AArch64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
+    wasm_x64_darwin_jobs =
+      modifyJobs
+        ( setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
+          . delVariable "INSTALL_CONFIGURE_ARGS"
+        )
+        $ addValidateRule WasmBackend $ validateBuilds Amd64 Darwin
+        $ wasm_build_config { hostFullyStatic = False }
+
     make_wasm_jobs cfg =
       modifyJobs
-        ( -- See Note [Testing wasm ghci browser mode]
-          setVariable "FIREFOX_LAUNCH_OPTS" "{\"browser\":\"firefox\",\"executablePath\":\"/usr/bin/firefox\"}"
+        ( delVariable "BROKEN_TESTS"
             . setVariable "HADRIAN_ARGS" "--docs=no-sphinx-pdfs --docs=no-sphinx-man"
             . delVariable "INSTALL_CONFIGURE_ARGS"
         )
