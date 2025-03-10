@@ -108,7 +108,6 @@ import Control.Monad.Catch as MC (mask)
 import Data.Binary
 import Data.ByteString (ByteString)
 import Data.Array ((!))
-import Data.IORef
 import Foreign hiding (void)
 import qualified GHC.Exts.Heap as Heap
 import GHC.Stack.CCS (CostCentre,CostCentreStack)
@@ -577,12 +576,11 @@ spawnIServ conf = do
   (ph, rh, wh) <- runWithPipes createProc (iservConfProgram conf)
                                           []
                                           (iservConfOpts    conf)
-  lo_ref <- newIORef Nothing
+  interpPipe <- mkPipeFromHandles rh wh
   lock <- newMVar ()
-  let pipe = Pipe { pipeRead = rh, pipeWrite = wh, pipeLeftovers = lo_ref }
   let process = InterpProcess
                   { interpHandle = ph
-                  , interpPipe   = pipe
+                  , interpPipe
                   , interpLock   = lock
                   }
 
