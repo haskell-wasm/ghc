@@ -87,7 +87,6 @@
 // -opti GHC flag to pass process arguments, like RTS flags or -opti-v
 // to dump the iserv messages.
 
-import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
@@ -110,7 +109,7 @@ class Parser {
 
   skip(len) {
     this.#offset += len;
-    assert(this.#offset <= this.#buf.length);
+    console.assert(this.#offset <= this.#buf.length);
   }
 
   readUInt8() {
@@ -137,7 +136,7 @@ class Parser {
     const len = this.readULEB128();
     const r = this.#buf.subarray(this.#offset, this.#offset + len);
     this.#offset += len;
-    assert(this.#offset <= this.#buf.length);
+    console.assert(this.#offset <= this.#buf.length);
     return r;
   }
 
@@ -152,10 +151,10 @@ function parseDyLink0(buf) {
   // magic, version
   p0.skip(8);
   // section id
-  assert(p0.readUInt8() === 0);
+  console.assert(p0.readUInt8() === 0);
   const p1 = new Parser(p0.readBuffer());
   // custom section name
-  assert(p1.readString() === "dylink.0");
+  console.assert(p1.readString() === "dylink.0");
 
   const r = { neededSos: [], exportInfo: [], importInfo: [] };
   while (!p1.eof()) {
@@ -354,7 +353,10 @@ class DyLD {
         })
       )
     ).find(({ status }) => status === "fulfilled");
-    assert(r, `findSystemLibrary(${f}): not found in ${[...this.#rpaths]}`);
+    console.assert(
+      r,
+      `findSystemLibrary(${f}): not found in ${[...this.#rpaths]}`
+    );
     return r.value;
   }
 
@@ -439,7 +441,7 @@ class DyLD {
       // __memory_base & __table_base, different for each .so
       let memory_base;
       let table_base = this.#table.grow(tableSize);
-      assert(tableP2Align === 0);
+      console.assert(tableP2Align === 0);
 
       // libc.so is always the first one to be ever loaded and has VIP
       // treatment. It will never be unloaded even if we support
@@ -451,7 +453,7 @@ class DyLD {
         // __heap_base/__heap_end so that dlmalloc can initialize
         // global state. wasm-ld aligns __heap_base to page sized so
         // we follow suit.
-        assert(memP2Align <= Math.log2(DyLD.#pageSize));
+        console.assert(memP2Align <= Math.log2(DyLD.#pageSize));
         memory_base = DyLD.#pageSize;
         const data_pages = Math.ceil(memSize / DyLD.#pageSize);
         this.#memory.grow(data_pages + 1);
@@ -577,7 +579,7 @@ class DyLD {
         // Invariant: each function symbol can be defined only once.
         // This is incorrect for weak symbols which are allowed to
         // appear multiple times but this is sufficient in practice.
-        assert(
+        console.assert(
           !this.exportFuncs[k],
           `duplicate symbol ${k} when loading ${soname}`
         );
@@ -593,7 +595,7 @@ class DyLD {
           if (this.#gotFunc[k]) {
             // ghc-prim/ghc-internal may export functions imported by
             // rts
-            assert(this.#gotFunc[k].value === DyLD.#poison);
+            console.assert(this.#gotFunc[k].value === DyLD.#poison);
             this.#table.set(this.#gotFunc[k].value, v);
           }
           continue;
@@ -603,7 +605,7 @@ class DyLD {
         if (v instanceof WebAssembly.Global) {
           const addr = v.value + memory_base;
           if (this.#gotMem[k]) {
-            assert(this.#gotMem[k].value === DyLD.#poison);
+            console.assert(this.#gotMem[k].value === DyLD.#poison);
             this.#gotMem[k].value = addr;
           } else {
             this.#gotMem[k] = new WebAssembly.Global(
@@ -673,7 +675,7 @@ class DyLD {
     }
     // Not in GOT.func yet, create the entry on demand
     if (this.exportFuncs[sym]) {
-      assert(!this.#gotFunc[sym]);
+      console.assert(!this.#gotFunc[sym]);
       const addr = this.#table.grow(1, this.exportFuncs[sym]);
       this.#gotFunc[sym] = new WebAssembly.Global(
         { value: "i32", mutable: true },
