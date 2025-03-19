@@ -368,8 +368,11 @@ export class DyLDRPC {
   #origin;
   #wsPipe;
   #wsSig;
+  #redirectWasiConsole;
+  #wsStdout;
+  #wsStderr;
 
-  constructor({ origin }) {
+  constructor({ origin, redirectWasiConsole }) {
     this.#origin = origin;
 
     const ws_url = this.#origin.replace("http://", "ws://");
@@ -397,8 +400,17 @@ export class DyLDRPC {
     this.#wsSig = new WebSocket(ws_url, "sig");
     this.#wsSig.binaryType = "arraybuffer";
 
+    this.#redirectWasiConsole = redirectWasiConsole;
+    if (redirectWasiConsole) {
+      this.#wsStdout = new WebSocket(ws_url, "stdout");
+      this.#wsStderr = new WebSocket(ws_url, "stderr");
+    }
+
     this.opened = Promise.all(
-      [this.#wsPipe, this.#wsSig].map(
+      (redirectWasiConsole
+        ? [this.#wsPipe, this.#wsSig, this.#wsStdout, this.#wsStderr]
+        : [this.#wsPipe, this.#wsSig]
+      ).map(
         (ws) =>
           new Promise((res, rej) => {
             ws.addEventListener("open", res);
@@ -411,6 +423,10 @@ export class DyLDRPC {
   close() {
     this.#wsPipe.close();
     this.#wsSig.close();
+    if (this.#redirectWasiConsole) {
+      this.#wsStdout.close();
+      this.#wsStderr.close();
+    }
   }
 
   async #rpc(endpoint, ...args) {
@@ -442,6 +458,22 @@ export class DyLDRPC {
   async fetchWasm(p) {
     return fetch(`${this.#origin}/fs${p}`);
   }
+
+  stdout(msg) {
+    if (this.#redirectWasiConsole) {
+      this.#wsStdout.send(msg);
+    } else {
+      console.info(msg);
+    }
+  }
+
+  stderr(msg) {
+    if (this.#redirectWasiConsole) {
+      this.#wsStderr.send(msg);
+    } else {
+      console.warn(msg);
+    }
+  }
 }
 
 // Actual implementation of endpoints used by DyLDRPC
@@ -450,7 +482,15 @@ class DyLDRPCServer {
   #server;
   #wss;
 
-  constructor({ host, port, dyldPath, libdir, ghciSoPath, args }) {
+  constructor({
+    host,
+    port,
+    dyldPath,
+    libdir,
+    ghciSoPath,
+    args,
+    redirectWasiConsole,
+  }) {
     this.#server = http.createServer(async (req, res) => {
       const origin = originFromServerAddress(await this.listening);
 
@@ -485,7 +525,7 @@ class DyLDRPCServer {
           `
 import { DyLDRPC, main } from "./fs${dyldPath}";
 const args = ${JSON.stringify({ libdir, ghciSoPath, args })};
-args.rpc = new DyLDRPC({origin: "${origin}"});
+args.rpc = new DyLDRPC({origin: "${origin}", redirectWasiConsole: ${redirectWasiConsole}});
 args.rpc.opened.then(() => main(args));
 `
         );
@@ -573,6 +613,16 @@ args.rpc.opened.then(() => main(args));
 
       if (ws.protocol === "sig") {
         this.#dyldHost.installSignalHandlers(() => ws.send(new Uint8Array(0)));
+        return;
+      }
+
+      if (ws.protocol === "stdout") {
+        ws.addEventListener("message", (ev) => console.info(ev.data));
+        return;
+      }
+
+      if (ws.protocol === "stderr") {
+        ws.addEventListener("message", (ev) => console.warn(ev.data));
         return;
       }
 
@@ -680,12 +730,8 @@ class DyLD {
           new wasi.OpenFile(
             new wasi.File(new Uint8Array(), { readonly: true })
           ),
-          wasi.ConsoleStdout.lineBuffered((msg) =>
-            console.log(`[WASI stdout] ${msg}`)
-          ),
-          wasi.ConsoleStdout.lineBuffered((msg) =>
-            console.warn(`[WASI stderr] ${msg}`)
-          ),
+          wasi.ConsoleStdout.lineBuffered((msg) => this.#rpc.stdout(msg)),
+          wasi.ConsoleStdout.lineBuffered((msg) => this.#rpc.stderr(msg)),
         ],
         { debug: false }
       );
@@ -1124,6 +1170,11 @@ export async function main({ rpc, libdir, ghciSoPath, args }) {
     libdir,
     ghciSoPath,
     args,
+    redirectWasiConsole:
+      process.env.GHCI_BROWSER_PUPPETEER_LAUNCH_OPTS ||
+      process.env.GHCI_BROWSER_PLAYWRIGHT_BROWSER_TYPE
+        ? false
+        : Boolean(process.env.GHCI_BROWSER_REDIRECT_WASI_CONSOLE),
   });
   const origin = originFromServerAddress(await server.listening);
 
