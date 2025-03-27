@@ -746,6 +746,7 @@ test('T22744',
        req_interp,
        pre_cmd('$MAKE -s --no-print-directory T22744'),
        extra_files(['genT22744']),
+       when(arch('wasm32'), skip),
        pre_cmd_timeout_multiplier(5),
        compile_timeout_multiplier(5)
      ],
