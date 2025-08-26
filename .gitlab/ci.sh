@@ -925,10 +925,8 @@ case ${1:-help} in
   # testsuite driver doesn't record notes for tests that fail due to
   # correctness.
   test_hadrian)
-    fetch_perf_notes
     res=0
     time_it "test" test_hadrian || res=$?
-    push_perf_notes
     exit $res ;;
   run_hadrian) shift; run_hadrian "$@" ;;
   perf_test) run_perf_test ;;
