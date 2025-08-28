@@ -410,7 +410,7 @@ hadrian-ghc-in-ghci:
     - .gitlab/ci.sh configure
     # Enable -Werror when building hadrian
     - "echo 'package hadrian'  > hadrian/cabal.project.local"
-    - "echo '  ghc-options: -Werror'  >> hadrian/cabal.project.local"
+    - "echo '  ghc-options: -Werror -Wwarn=deprecations'  >> hadrian/cabal.project.local"
     # Load ghc-in-ghci then immediately exit and check the modules loaded
     - export CORES="$(mk/detect-cpu-count.sh)"
     - echo ":q" | HADRIAN_ARGS=-j$CORES hadrian/ghci-multi -j$CORES | tail -n2 | grep "Ok,"
