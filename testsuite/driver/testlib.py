@@ -655,6 +655,7 @@ def get_dir_size(path):
         return total
     except FileNotFoundError:
         print("Exception: Could not find: " + path)
+        return total
 
 def collect_size_dir ( deviation, path ):
     return collect_size_dir_func ( deviation, lambda: path )
