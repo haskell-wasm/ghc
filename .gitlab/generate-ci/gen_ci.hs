@@ -114,8 +114,7 @@ data LinuxDistro
   | Ubuntu2004
   | Ubuntu1804
   | Alpine312
-  | Alpine318
-  | Alpine320
+  | Alpine322
   | AlpineWasm
   | Rocky8
   deriving (Eq)
@@ -298,9 +297,8 @@ distroName Fedora38  = "fedora38"
 distroName Ubuntu1804 = "ubuntu18_04"
 distroName Ubuntu2004 = "ubuntu20_04"
 distroName Alpine312  = "alpine3_12"
-distroName Alpine318  = "alpine3_18"
-distroName Alpine320  = "alpine3_20"
-distroName AlpineWasm = "alpine3_20-wasm"
+distroName Alpine322  = "alpine3_22"
+distroName AlpineWasm = "alpine3_22-wasm"
 distroName Rocky8     = "rocky8"
 
 opsysName :: Opsys -> String
@@ -449,8 +447,7 @@ alpineVariables = mconcat
 
 distroVariables :: LinuxDistro -> Variables
 distroVariables Alpine312 = alpineVariables
-distroVariables Alpine318 = alpineVariables
-distroVariables Alpine320 = alpineVariables
+distroVariables Alpine322 = alpineVariables
 distroVariables Fedora33 = mconcat
   -- LLC/OPT do not work for some reason in our fedora images
   -- These tests fail with this error: T11649 T5681 T7571 T8131b
@@ -1006,8 +1003,8 @@ job_groups =
      , fullyStaticBrokenTests (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken static))
      -- Dynamically linked build, suitable for building your own static executables on alpine
      , disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken vanilla)))
-     , disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine318) (splitSectionsBroken vanilla))
-     , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine320) (splitSectionsBroken vanilla))
+     , disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine322) (splitSectionsBroken vanilla))
+     , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine322) (splitSectionsBroken vanilla))
      , fullyStaticBrokenTests (disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) staticNativeInt)))
      , validateBuilds Amd64 (Linux Debian11) (crossConfig "aarch64-linux-gnu" (Emulator "qemu-aarch64 -L /usr/aarch64-linux-gnu") Nothing)
 
@@ -1073,24 +1070,24 @@ mkPlatform arch opsys = archName arch <> "-" <> opsysName opsys
 platform_mapping :: Map String (JobGroup BindistInfo)
 platform_mapping = Map.map go combined_result
   where
-    whitelist = [ "x86_64-linux-alpine3_12-validate"
+    whitelist = [ "x86_64-linux-alpine3_12-validate+fully_static"
                 , "x86_64-linux-deb11-validate"
                 , "x86_64-linux-deb12-validate"
                 , "x86_64-linux-deb10-validate+debug_info"
                 , "x86_64-linux-fedora33-release"
                 , "x86_64-linux-deb11-cross_aarch64-linux-gnu-validate"
                 , "x86_64-windows-validate"
-                , "nightly-x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static"
+                , "nightly-x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static"
                 , "nightly-x86_64-linux-deb11-validate"
                 , "nightly-x86_64-linux-deb12-validate"
-                , "x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static"
+                , "x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static"
                 , "x86_64-linux-deb12-validate+thread_sanitizer_cmm"
                 , "nightly-aarch64-linux-deb10-validate"
                 , "nightly-x86_64-linux-alpine3_12-validate"
                 , "nightly-x86_64-linux-deb10-validate"
                 , "nightly-x86_64-linux-fedora33-release"
                 , "nightly-x86_64-windows-validate"
-                , "release-x86_64-linux-alpine3_12-release+no_split_sections"
+                , "release-x86_64-linux-alpine3_12-release+fully_static+no_split_sections"
                 , "release-x86_64-linux-deb10-release"
                 , "release-x86_64-linux-deb11-release"
                 , "release-x86_64-linux-deb12-release"
