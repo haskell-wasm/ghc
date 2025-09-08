@@ -117,8 +117,7 @@ data LinuxDistro
   | Ubuntu1804
   | Centos7
   | Alpine312
-  | Alpine318
-  | Alpine320
+  | Alpine322
   | AlpineWasm
   | Rocky8
   deriving (Eq)
@@ -316,9 +315,8 @@ distroName Ubuntu2004 = "ubuntu20_04"
 distroName Ubuntu2204 = "ubuntu22_04"
 distroName Centos7    = "centos7"
 distroName Alpine312  = "alpine3_12"
-distroName Alpine318  = "alpine3_18"
-distroName Alpine320  = "alpine3_20"
-distroName AlpineWasm = "alpine3_20-wasm"
+distroName Alpine322  = "alpine3_22"
+distroName AlpineWasm = "alpine3_22-wasm"
 distroName Rocky8     = "rocky8"
 
 opsysName :: Opsys -> String
@@ -473,8 +471,7 @@ alpineVariables arch = mconcat $
 
 distroVariables :: Arch -> LinuxDistro -> Variables
 distroVariables arch Alpine312 = alpineVariables arch
-distroVariables arch Alpine318 = alpineVariables arch
-distroVariables arch Alpine320 = alpineVariables arch
+distroVariables arch Alpine322 = alpineVariables arch
 distroVariables _ Centos7 = mconcat [
     "HADRIAN_ARGS" =: "--docs=no-sphinx"
   , "BROKEN_TESTS" =: "T22012" -- due to #23979
@@ -1108,8 +1105,8 @@ alpine_x86 =
     fullyStaticBrokenTests (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken static))
   , fullyStaticBrokenTests (disableValidate (allowFailureGroup (standardBuildsWithConfig Amd64 (Linux Alpine312) staticNativeInt)))
   -- Dynamically linked build, suitable for building your own static executables on alpine
-  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine312) (splitSectionsBroken vanilla))
-  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine320) (splitSectionsBroken vanilla))
+  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine322) (splitSectionsBroken vanilla))
+  , disableValidate (standardBuildsWithConfig Amd64 (Linux Alpine322) (splitSectionsBroken vanilla))
   ]
   where
     -- ghcilink002 broken due to #17869
@@ -1120,7 +1117,7 @@ alpine_x86 =
 
 alpine_aarch64 :: [JobGroup Job]
 alpine_aarch64 = [
-  disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine318) (splitSectionsBroken vanilla))
+  disableValidate (standardBuildsWithConfig AArch64 (Linux Alpine322) (splitSectionsBroken vanilla))
   ]
 
 cross_jobs :: [JobGroup Job]
@@ -1188,7 +1185,7 @@ mkPlatform arch opsys = archName arch <> "-" <> opsysName opsys
 platform_mapping :: Map String (JobGroup BindistInfo)
 platform_mapping = Map.map go combined_result
   where
-    whitelist = [ "x86_64-linux-alpine3_12-validate"
+    whitelist = [ "x86_64-linux-alpine3_12-validate+fully_static"
                 , "x86_64-linux-deb11-validate"
                 , "x86_64-linux-deb12-validate"
                 , "x86_64-linux-deb10-validate+debug_info"
@@ -1196,10 +1193,10 @@ platform_mapping = Map.map go combined_result
                 , "x86_64-linux-deb11-cross_aarch64-linux-gnu-validate"
                 , "x86_64-windows-validate"
                 , "aarch64-linux-deb12-validate"
-                , "nightly-x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
+                , "nightly-x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
                 , "nightly-x86_64-linux-deb11-validate"
                 , "nightly-x86_64-linux-deb12-validate"
-                , "x86_64-linux-alpine3_20-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
+                , "x86_64-linux-alpine3_22-wasm-cross_wasm32-wasi-release+host_fully_static+text_simdutf"
                 , "x86_64-linux-deb12-validate+thread_sanitizer_cmm"
                 , "nightly-aarch64-linux-deb10-validate"
                 , "nightly-aarch64-linux-deb12-validate"
@@ -1207,7 +1204,7 @@ platform_mapping = Map.map go combined_result
                 , "nightly-x86_64-linux-deb10-validate"
                 , "nightly-x86_64-linux-fedora33-release"
                 , "nightly-x86_64-windows-validate"
-                , "release-x86_64-linux-alpine3_12-release+no_split_sections"
+                , "release-x86_64-linux-alpine3_12-release+fully_static+no_split_sections"
                 , "release-x86_64-linux-deb10-release"
                 , "release-x86_64-linux-deb11-release"
                 , "release-x86_64-linux-deb12-release"

@@ -11,7 +11,7 @@ variables:
   GIT_SSL_NO_VERIFY: "1"
 
   # Commit of ghc/ci-images repository from which to pull Docker images
-  DOCKER_REV: 94806d948c7263fa6318561a1af44421493d2db3
+  DOCKER_REV: be4ac2cd18f38e63b263e2a27c76a7c279385796
 
   # Sequential version number of all cached things.
   # Bump to invalidate GitLab CI cache.
@@ -1179,9 +1179,7 @@ ghcup-metadata-nightly:
       artifacts: false
     - job: nightly-x86_64-windows-validate
       artifacts: false
-    - job: nightly-x86_64-linux-alpine3_12-validate
-      artifacts: false
-    - job: nightly-x86_64-linux-alpine3_20-validate
+    - job: nightly-x86_64-linux-alpine3_22-validate
       artifacts: false
     - job: nightly-x86_64-linux-deb9-validate
       artifacts: false
@@ -1199,7 +1197,7 @@ ghcup-metadata-nightly:
       artifacts: false
     - job: nightly-aarch64-linux-deb12-validate
       artifacts: false
-    - job: nightly-aarch64-linux-alpine3_18-validate
+    - job: nightly-aarch64-linux-alpine3_22-validate
       artifacts: false
     - job: source-tarball
       artifacts: false
