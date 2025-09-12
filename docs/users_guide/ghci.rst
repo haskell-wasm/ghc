@@ -3170,6 +3170,13 @@ commonly used commands.
 
     Executes the shell command ⟨command⟩.
 
+.. ghci-cmd:: :shell ⟨command⟩
+
+    Executes ⟨command⟩ via ``sh -c`` using ``callProcess``.
+    On Windows this invokes the MSYS2 POSIX shell rather than ``cmd.exe``,
+    providing consistent POSIX shell semantics. Behaves like ``:!``
+    with respect to success/failure and output.
+
 
 .. _ghci-set:
 
