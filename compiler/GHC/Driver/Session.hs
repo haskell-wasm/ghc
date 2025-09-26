@@ -3598,11 +3598,44 @@ makeDynFlagsConsistent dflags
  , Nothing <- outputFile dflags
  = pgmError "--output must be specified when using --merge-objs"
 
+ -- When we do ghci, force using dyn ways if the target RTS linker
+  -- only supports dynamic code
+ | LinkInMemory <- ghcLink dflags
+ , sTargetRTSLinkerOnlySupportsSharedLibs $ settings dflags
+#if defined(HAVE_INTERNAL_INTERPRETER)
+ , not (ways dflags `hasWay` WayDyn)
+#else
+ , not (ways dflags `hasWay` WayDyn && gopt Opt_ExternalInterpreter dflags)
+#endif
+    = flip loopNoWarn "Forcing dynamic way because target RTS linker only supports dynamic code" $
+#if !defined(HAVE_INTERNAL_INTERPRETER)
+        -- Force -fexternal-interpreter if internal-interpreter is not
+        -- available at this stage
+        setGeneralFlag' Opt_ExternalInterpreter $
+#endif
+        addWay' WayDyn dflags
+
+ | LinkInMemory <- ghcLink dflags
+ , not (gopt Opt_ExternalInterpreter dflags)
+ , targetWays_ dflags /= hostFullWays
+    = flip loopNoWarn "Forcing build ways to match the compiler ways because we're using the internal interpreter" $
+        let dflags_a = dflags { targetWays_ = hostFullWays }
+            dflags_b = foldl gopt_set dflags_a
+                     $ concatMap (wayGeneralFlags platform)
+                                 hostFullWays
+            dflags_c = foldl gopt_unset dflags_b
+                     $ concatMap (wayUnsetGeneralFlags platform)
+                                 hostFullWays
+        in dflags_c
+
  | otherwise = (dflags, mempty)
     where loc = mkGeneralSrcSpan (fsLit "when making flags consistent")
           loop updated_dflags warning
               = case makeDynFlagsConsistent updated_dflags of
                 (dflags', ws) -> (dflags', L loc (DriverInconsistentDynFlags warning) : ws)
+          loopNoWarn updated_dflags _doc
+              = case makeDynFlagsConsistent updated_dflags of
+                (dflags', ws) -> (dflags', ws)
           platform = targetPlatform dflags
           arch = platformArch platform
           os   = platformOS   platform
