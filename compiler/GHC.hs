@@ -430,6 +430,10 @@ import System.Exit      ( exitWith, ExitCode(..) )
 import System.FilePath
 import System.IO.Error  ( isDoesNotExistError )
 
+#if defined(HAVE_INTERNAL_INTERPRETER)
+import Foreign.C
+#endif
+
 -- %************************************************************************
 -- %*                                                                      *
 --             Initialisation: exception handlers
@@ -561,12 +565,12 @@ withCleanupSession ghc = ghc `MC.finally` cleanup
 
 initGhcMonad :: GhcMonad m => Maybe FilePath -> m ()
 initGhcMonad mb_top_dir = setSession =<< liftIO ( do
-#if !defined(javascript_HOST_ARCH)
+#if defined(HAVE_INTERNAL_INTERPRETER)
     -- The call to c_keepCAFsForGHCi must not be optimized away. Even in non-debug builds.
     -- So we can't use assertM here.
     -- See Note [keepCAFsForGHCi] in keepCAFsForGHCi.c for details about why.
     !keep_cafs <- c_keepCAFsForGHCi
-    massert keep_cafs
+    massert $ keep_cafs /= 0
 #endif
     initHscEnv mb_top_dir
   )
@@ -2029,7 +2033,7 @@ mkApiErr :: DynFlags -> SDoc -> GhcApiError
 mkApiErr dflags msg = GhcApiError (showSDoc dflags msg)
 
 
-#if !defined(javascript_HOST_ARCH)
+#if defined(HAVE_INTERNAL_INTERPRETER)
 foreign import ccall unsafe "keepCAFsForGHCi"
-    c_keepCAFsForGHCi   :: IO Bool
+    c_keepCAFsForGHCi   :: IO CBool
 #endif
