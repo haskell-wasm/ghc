@@ -834,6 +834,27 @@ class DyLD {
       );
     }
 
+    // Both wasi implementations we use provide
+    // wasi.initialize(instance) to initialize a wasip1 reactor
+    // module. However, instance does not really need to be a
+    // WebAssembly.Instance object; the wasi implementations only need
+    // to access instance.exports.memory for the wasi syscalls to
+    // work.
+    //
+    // Given we'll reuse the same wasi object across different
+    // WebAssembly.Instance objects anyway and
+    // wasi.initialize(instance) can't be called more than once, we
+    // use this simple trick and pass a fake instance object that
+    // contains just enough info for the wasi implementation to
+    // initialize its internal state. Later when we load each wasm
+    // shared library, we can just manually invoke their
+    // initialization functions.
+    this.#wasi.initialize({
+      exports: {
+        memory: this.#memory,
+      },
+    });
+
     // Keep this in sync with rts/wasm/Wasm.S!
     for (let i = 1; i <= 10; ++i) {
       this.#regs[`__R${i}`] = new WebAssembly.Global({
@@ -1174,64 +1195,20 @@ class DyLD {
         throw new Error(`cannot handle export ${k} ${v}`);
       }
 
-      // We call wasi.initialize when loading libc.so, then reuse the
-      // wasi instance globally. When loading later .so files, just
-      // manually invoke _initialize().
-      if (soname === "libc.so") {
+      // See
+      // https://gitlab.haskell.org/haskell-wasm/llvm-project/-/blob/release/21.x/lld/wasm/Writer.cpp#L1451,
+      // __wasm_apply_data_relocs is now optional so only call it if
+      // it exists (we know for sure it exists for libc.so though).
+      // There's also __wasm_init_memory (not relevant yet, we don't
+      // use passive segments) & __wasm_apply_global_relocs but
+      // those are included in the start function and should have
+      // been called upon instantiation, see
+      // Writer::createStartFunction().
+      if (instance.exports.__wasm_apply_data_relocs) {
         instance.exports.__wasm_apply_data_relocs();
-        // wasm-ld forbits --export-memory with --shared, I don't know
-        // why but this is sufficient to make things work
-        this.#wasi.initialize({
-          exports: {
-            memory: this.#memory,
-            _initialize: instance.exports._initialize,
-          },
-        });
-        continue;
       }
 
-      const init = () => {
-        // See
-        // https://gitlab.haskell.org/haskell-wasm/llvm-project/-/blob/release/21.x/lld/wasm/Writer.cpp#L1451,
-        // __wasm_apply_data_relocs is now optional so only call it if
-        // it exists (we know for sure it exists for libc.so though).
-        // There's also __wasm_init_memory (not relevant yet, we don't
-        // use passive segments) & __wasm_apply_global_relocs but
-        // those are included in the start function and should have
-        // been called upon instantiation, see
-        // Writer::createStartFunction().
-        if (instance.exports.__wasm_apply_data_relocs) {
-          instance.exports.__wasm_apply_data_relocs();
-        }
-
-        instance.exports._initialize();
-      };
-
-      // rts init must be deferred until ghc-internal symbols are
-      // exported. We hard code this hack for now.
-      if (/libHSrts-\d+(\.\d+)*/i.test(soname)) {
-        this.rts_init = init;
-        continue;
-      }
-      if (/libHSghc-internal-\d+(\.\d+)*/i.test(soname)) {
-        this.rts_init();
-        delete this.rts_init;
-
-        // At this point the RTS symbols in linear memory are fixed
-        // and constructors are run, especially the one in JSFFI.c
-        // that does GHC RTS initialization for any code that links
-        // JSFFI.o. Luckily no Haskell computation or gc has taken
-        // place yet, so we must set keepCAFs=1 right now! Otherwise,
-        // any BCO created by later TH splice or ghci expression may
-        // refer to any CAF that's not reachable from GC roots (here
-        // our only entry point is defaultServer) and the CAF could
-        // have been GC'ed! (#26106)
-        //
-        // We call it here instead of in RTS C code, since we only
-        // want keepCAFs=1 for ghci, not user code.
-        this.exportFuncs.setKeepCAFs();
-      }
-      init();
+      instance.exports._initialize();
     }
   }
 
