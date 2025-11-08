@@ -531,7 +531,7 @@ AC_SUBST(InstallNameToolCmd)
 # versions of LLVM simultaneously, but that stopped working around
 # 3.5/3.6 release of LLVM.
 LlvmMinVersion=13  # inclusive
-LlvmMaxVersion=20  # not inclusive
+LlvmMaxVersion=22  # not inclusive
 AC_SUBST([LlvmMinVersion])
 AC_SUBST([LlvmMaxVersion])
 
