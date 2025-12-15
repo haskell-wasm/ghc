@@ -856,10 +856,10 @@ INFO_TABLE_CONSTR(stg_MSG_CLONE_STACK,3,0,0,PRIM,"MSG_CLONE_STACK","MSG_CLONE_ST
 { ccall pbarf("stg_MSG_CLONE_STACK object (%p) entered!", R1 "ptr") never returns; }
 
 INFO_TABLE_CONSTR(stg_MSG_SET_TSO_FLAG,2,1,0,PRIM,"MSG_SET_TSO_FLAG","MSG_SET_TSO_FLAG")
-{ foreign "C" barf("stg_MSG_SET_TSO_FLAG object (%p) entered!", R1) never returns; }
+{ ccall pbarf("stg_MSG_SET_TSO_FLAG object (%p) entered!", R1 "ptr") never returns; }
 
 INFO_TABLE_CONSTR(stg_MSG_UNSET_TSO_FLAG,2,1,0,PRIM,"MSG_UNSET_TSO_FLAG","MSG_UNSET_TSO_FLAG")
-{ foreign "C" barf("stg_MSG_UNSET_TSO_FLAG object (%p) entered!", R1) never returns; }
+{ ccall pbarf("stg_MSG_UNSET_TSO_FLAG object (%p) entered!", R1 "ptr") never returns; }
 
 /* ----------------------------------------------------------------------------
    END_TSO_QUEUE
@@ -981,4 +981,3 @@ INFO_TABLE( stg_COMPACT_NFDATA_CLEAN, 0, 9, COMPACT_NFDATA, "COMPACT_NFDATA", "C
 INFO_TABLE( stg_COMPACT_NFDATA_DIRTY, 0, 9, COMPACT_NFDATA, "COMPACT_NFDATA", "COMPACT_NFDATA")
     ()
 { ccall pbarf("COMPACT_NFDATA_DIRTY object (%p) entered!", R1 "ptr") never returns; }
-
