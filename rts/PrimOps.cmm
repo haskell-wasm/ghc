@@ -2606,7 +2606,7 @@ stg_asyncReadzh ( W_ fd, W_ is_sock, W_ len, W_ buf )
     CInt reqID;
 
 #if defined(THREADED_RTS)
-    ccall barf("asyncRead# on threaded RTS") never returns;
+    ccall sbarf("asyncRead# on threaded RTS") never returns;
 #else
 
     (reqID) = ccall addIORequest(fd, 0/*FALSE*/,is_sock,len,buf "ptr");
@@ -2625,7 +2625,7 @@ stg_asyncWritezh ( W_ fd, W_ is_sock, W_ len, W_ buf )
     CInt reqID;
 
 #if defined(THREADED_RTS)
-    ccall barf("asyncWrite# on threaded RTS") never returns;
+    ccall sbarf("asyncWrite# on threaded RTS") never returns;
 #else
 
     (reqID) = ccall addIORequest(fd, 1/*TRUE*/,is_sock,len,buf "ptr");
@@ -2644,7 +2644,7 @@ stg_asyncDoProczh ( W_ proc, W_ param )
     CInt reqID;
 
 #if defined(THREADED_RTS)
-    ccall barf("asyncDoProc# on threaded RTS") never returns;
+    ccall sbarf("asyncDoProc# on threaded RTS") never returns;
 #else
 
     (reqID) = ccall addDoProcRequest(proc "ptr",param "ptr");
