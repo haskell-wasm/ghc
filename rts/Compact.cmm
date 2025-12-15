@@ -284,7 +284,7 @@ eval:
         goto constructor;
     }}
 
-    ccall barf("stg_compactWorkerzh", NULL);
+    ccall sbarf("stg_compactWorkerzh") never returns;
 }
 
 //

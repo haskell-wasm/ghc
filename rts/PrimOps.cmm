@@ -2549,7 +2549,7 @@ stg_whereFromzh (P_ clos, W_ buf)
 stg_waitReadzh ( W_ fd )
 {
 #if defined(THREADED_RTS)
-    ccall barf("waitRead# on threaded RTS") never returns;
+    ccall sbarf("waitRead# on threaded RTS") never returns;
 #else
 
     ASSERT(StgTSO_why_blocked(CurrentTSO) == NotBlocked::I32);
@@ -2565,7 +2565,7 @@ stg_waitReadzh ( W_ fd )
 stg_waitWritezh ( W_ fd )
 {
 #if defined(THREADED_RTS)
-    ccall barf("waitWrite# on threaded RTS") never returns;
+    ccall sbarf("waitWrite# on threaded RTS") never returns;
 #else
 
     ASSERT(StgTSO_why_blocked(CurrentTSO) == NotBlocked::I32);
@@ -2588,7 +2588,7 @@ stg_delayzh ( W_ us_delay )
 #endif
 
 #if defined(THREADED_RTS)
-    ccall barf("delay# on threaded RTS") never returns;
+    ccall sbarf("delay# on threaded RTS") never returns;
 #else
 
     ASSERT(StgTSO_why_blocked(CurrentTSO) == NotBlocked::I32);
@@ -2633,7 +2633,7 @@ stg_asyncReadzh ( W_ fd, W_ is_sock, W_ len, W_ buf )
     CInt reqID;
 
 #if defined(THREADED_RTS)
-    ccall barf("asyncRead# on threaded RTS") never returns;
+    ccall sbarf("asyncRead# on threaded RTS") never returns;
 #else
 
     /* could probably allocate this on the heap instead */
@@ -2659,7 +2659,7 @@ stg_asyncWritezh ( W_ fd, W_ is_sock, W_ len, W_ buf )
     CInt reqID;
 
 #if defined(THREADED_RTS)
-    ccall barf("asyncWrite# on threaded RTS") never returns;
+    ccall sbarf("asyncWrite# on threaded RTS") never returns;
 #else
 
     ("ptr" ares) = ccall stgMallocBytes(SIZEOF_StgAsyncIOResult,
@@ -2685,7 +2685,7 @@ stg_asyncDoProczh ( W_ proc, W_ param )
     CInt reqID;
 
 #if defined(THREADED_RTS)
-    ccall barf("asyncDoProc# on threaded RTS") never returns;
+    ccall sbarf("asyncDoProc# on threaded RTS") never returns;
 #else
 
     /* could probably allocate this on the heap instead */
@@ -3023,4 +3023,3 @@ stg_castFloatToWord32zh(F_ f)
 
     return (w);
 }
-

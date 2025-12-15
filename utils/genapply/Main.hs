@@ -848,7 +848,7 @@ genApply targetInfo args =
 
        text "default: {",
        nest 4 (
-         text "foreign \"C\" barf(\"" <> fun_ret_label <> text "\", NULL) never returns;"
+         text "ccall sbarf(\"" <> fun_ret_label <> text "\") never returns;"
        ),
        text "}"
 
