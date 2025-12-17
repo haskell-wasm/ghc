@@ -186,5 +186,3 @@ AC_DEFUN([PREP_TARGET_FILE],[
     esac
     AC_SUBST([TargetEndianness])
 ])
-
-AC_DEFUN()
