@@ -624,3 +624,5 @@ test('IOManager', [js_skip, when(arch('wasm32'), skip), when(opsys('mingw32'), s
 test('T25560', [req_c_rts, ignore_stderr], compile_and_run, [''])
 
 test('TestProddableBlockSet', [req_c_rts], multimod_compile_and_run, ['TestProddableBlockSet.c', '-no-hs-main'])
+
+test('resizeMutableByteArrayInPlace', [req_cmm, extra_ways(['optasm', 'sanity']), only_ways(['optasm', 'sanity'])], compile_and_run, [''])
