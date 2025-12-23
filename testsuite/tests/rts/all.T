@@ -701,3 +701,5 @@ test('T27477',
 test('T27618',
      [req_target_smp, omit_ghci],
      compile_and_run, ['-O2 -threaded -with-rtsopts "-N4 -A32k"'])
+
+test('resizeMutableByteArrayInPlace', [req_cmm, extra_ways(['optasm', 'sanity']), only_ways(['optasm', 'sanity'])], compile_and_run, [''])
