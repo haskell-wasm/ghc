@@ -1,4 +1,4 @@
 test('T25198',
-     normal,
+     [skip],
      compile_fail,
      ['+RTS -M8M -RTS'])

@@ -79,6 +79,8 @@ import GHC.Driver.Session.Mode
 import GHC.Driver.Session.Lint
 import GHC.Driver.Session.Units
 
+import GHC.Conc
+
 -- Standard Haskell libraries
 import System.IO
 import System.Environment
@@ -104,6 +106,9 @@ import qualified Data.List.NonEmpty as NE
 
 main :: IO ()
 main = do
+   nproc <- getNumProcessors
+   setNumCapabilities $ max 1 $ min 8 $ nproc `div` 2
+
    hSetBuffering stdout LineBuffering
    hSetBuffering stderr LineBuffering
 
@@ -509,4 +514,3 @@ abiHash strs = do
   f <- fingerprintBinMem bh
 
   putStrLn (showPpr dflags f)
-

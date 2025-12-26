@@ -113,7 +113,7 @@ runNjobsAbstractSem n_jobs action = do
   n_cpus <- getNumProcessors
   let
     asem = AbstractSem (waitQSem compile_sem) (signalQSem compile_sem)
-    set_num_caps n = unless (n_capabilities /= 1) $ setNumCapabilities n
+    set_num_caps n = setNumCapabilities n
     updNumCapabilities =  do
       -- Setting number of capabilities more than
       -- CPU count usually leads to high userspace
