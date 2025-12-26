@@ -87,7 +87,6 @@ data PackageHashConfigInputs = PackageHashConfigInputs {
        pkgHashGHCiLib             :: Bool,
        pkgHashProfLib             :: Bool,
        pkgHashProfExe             :: Bool,
-       pkgHashSplitObjs           :: Bool,
        pkgHashSplitSections       :: Bool,
        pkgHashStripLibs           :: Bool,
        pkgHashStripExes           :: Bool,
@@ -144,7 +143,6 @@ pkgHashOracle = void $ addOracleCache $ \(PkgHashKey (stag, pkg)) -> do
       pkgHashGHCiLib = False
       pkgHashProfLib = profiling `Set.member` libWays
       pkgHashProfExe = pkg == ghc && ghcProfiled flav stag
-      pkgHashSplitObjs = False -- Deprecated
       pkgHashSplitSections = ghcSplitSections flav
       pkgHashStripExes = False
       pkgHashStripLibs = False
@@ -244,7 +242,6 @@ renderPackageHashInputs PackageHashInputs{
       , opt   "ghci-lib"    False show pkgHashGHCiLib
       , opt   "prof-lib"    False show pkgHashProfLib
       , opt   "prof-exe"    False show pkgHashProfExe
-      , opt   "split-objs"   False show pkgHashSplitObjs
       , opt   "split-sections" False show pkgHashSplitSections
       , opt   "stripped-lib" False show pkgHashStripLibs
       , opt   "stripped-exe" True  show pkgHashStripExes
