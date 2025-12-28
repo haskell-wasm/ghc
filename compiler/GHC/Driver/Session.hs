@@ -201,6 +201,8 @@ module GHC.Driver.Session (
         -- * Compiler configuration suitable for display to the user
         compilerInfo,
 
+        targetHasRTSWays,
+
         wordAlignment,
 
         setUnsafeGlobalDynFlags,
@@ -3526,6 +3528,15 @@ compilerInfo dflags
     useInplaceMinGW = toolSettings_useInplaceMinGW $ toolSettings dflags
     expandDirectories :: FilePath -> Maybe FilePath -> String -> String
     expandDirectories topd mtoold = expandToolDir useInplaceMinGW mtoold . expandTopDir topd
+
+-- | Query if the target RTS has the given 'Ways'. It's computed from
+-- the @"RTS ways"@ field in the settings file.
+targetHasRTSWays :: DynFlags -> Ways -> Bool
+targetHasRTSWays dflags ways
+  | Just ws <- lookup "RTS ways" $ compilerInfo dflags =
+      waysTag ways
+        `elem` words ws
+  | otherwise = panic "RTS ways not found in settings"
 
 -- Note [Special unit-ids]
 -- ~~~~~~~~~~~~~~~~~~~~~~~
