@@ -171,8 +171,6 @@ data Builder = Alex
              | GhcPkg GhcPkgMode Stage
              | Haddock HaddockMode
              | Happy
-             | Hp2Ps
-             | Hpc
              | HsCpp
              | JsCpp
              | Hsc2Hs Stage
@@ -213,10 +211,6 @@ builderProvenance = \case
     Haddock _        -> context Stage1 haddock
     Hsc2Hs _         -> context stage0Boot hsc2hs
     Unlit            -> context stage0Boot unlit
-
-    -- Never used
-    Hpc              -> context Stage1 hpcBin
-    Hp2Ps            -> context stage0Boot hp2ps
     _                -> Nothing
   where
     context s p = Just $ vanillaContext s p
