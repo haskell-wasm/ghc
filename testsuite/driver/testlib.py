@@ -1017,9 +1017,6 @@ def wordsize( ws: int ) -> bool:
 def msys( ) -> bool:
     return config.msys
 
-def cygwin( ) -> bool:
-    return config.cygwin
-
 def js_arch() -> bool:
     return arch("javascript");
 
