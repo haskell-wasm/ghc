@@ -382,7 +382,7 @@ getPrim (BinMem _ ix_r sz_r arr_r) size f = do
   when (ix + size > sz) $
       ioError (mkIOError eofErrorType "Data.Binary.getPrim" Nothing Nothing)
   arr <- readIORef arr_r
-  w <- unsafeWithForeignPtr arr $ \p -> f (p `plusPtr` ix)
+  !w <- unsafeWithForeignPtr arr $ \p -> f (p `plusPtr` ix)
     -- This is safe WRT #17760 as we we guarantee that the above line doesn't
     -- diverge
   writeFastMutInt ix_r (ix + size)
