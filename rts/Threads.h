@@ -29,7 +29,7 @@ void unsetThreadFlag     (Capability *from, StgTSO *tso, StgWord32 flag);
 //
 #if defined(THREADED_RTS)
 void wakeupThreadOnCapability (Capability *cap,
-                               Capability *other_cap, 
+                               Capability *other_cap,
                                StgTSO *tso);
 #endif
 
@@ -44,8 +44,6 @@ StgBool isThreadBound (StgTSO* tso);
 // Overflow/underflow
 void threadStackOverflow  (Capability *cap, StgTSO *tso);
 W_   threadStackUnderflow (Capability *cap, StgTSO *tso);
-
-bool performTryPutMVar(Capability *cap, StgMVar *mvar, StgClosure *value);
 
 #define CTOI_OLD_TUPLE_SPILL_WORDS_OFFSET 4
 #define CTOI_TUPLE_INFO_OFFSET 2
