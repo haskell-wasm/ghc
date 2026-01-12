@@ -682,6 +682,7 @@ extern char **environ;
       SymI_HasDataProto(stg_readTVarIOzh)                                   \
       SymI_HasProto(resumeThread)                                       \
       SymI_HasProto(setNumCapabilities)                                 \
+      SymI_HasProto(performTryPutMVar)                                  \
       SymI_HasProto(getNumberOfProcessors)                              \
       SymI_HasProto(resolveObjs)                                        \
       SymI_HasDataProto(stg_retryzh)                                        \
@@ -872,7 +873,6 @@ extern char **environ;
       SymI_HasDataProto(stg_takeMVarzh)                                     \
       SymI_HasDataProto(stg_readMVarzh)                                     \
       SymI_HasDataProto(stg_threadStatuszh)                                 \
-      SymI_HasDataProto(stg_tryPutMVarzh)                                   \
       SymI_HasDataProto(stg_tryTakeMVarzh)                                  \
       SymI_HasDataProto(stg_tryReadMVarzh)                                  \
       SymI_HasDataProto(stg_unmaskAsyncExceptionszh)                        \
