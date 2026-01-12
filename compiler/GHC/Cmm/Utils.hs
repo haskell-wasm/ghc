@@ -43,6 +43,7 @@ module GHC.Cmm.Utils(
 
         baseExpr, spExpr, hpExpr, spLimExpr, hpLimExpr,
         currentTSOExpr, currentNurseryExpr, cccsExpr,
+        myCapabilityExpr,
 
         -- Tagging
         cmmTagMask, cmmPointerMask, cmmUntag, cmmIsTagged, cmmIsNotTagged,
@@ -592,7 +593,7 @@ blockTicks b = reverse $ foldBlockNodesF goStmt b []
 -- Access to common global registers
 
 baseExpr, spExpr, hpExpr, currentTSOExpr, currentNurseryExpr,
-  spLimExpr, hpLimExpr, cccsExpr :: Platform -> CmmExpr
+  spLimExpr, hpLimExpr, cccsExpr, myCapabilityExpr :: Platform -> CmmExpr
 baseExpr           p = CmmReg $ baseReg           p
 spExpr             p = CmmReg $ spReg             p
 spLimExpr          p = CmmReg $ spLimReg          p
@@ -601,3 +602,5 @@ hpLimExpr          p = CmmReg $ hpLimReg          p
 currentTSOExpr     p = CmmReg $ currentTSOReg     p
 currentNurseryExpr p = CmmReg $ currentNurseryReg p
 cccsExpr           p = CmmReg $ cccsReg           p
+myCapabilityExpr   p =
+  cmmRegOff (baseReg p) $ negate $ pc_OFFSET_Capability_r $ platformConstants p
