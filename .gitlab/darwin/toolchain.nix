@@ -10,7 +10,7 @@ in
 let
   hsPkgs = pkgs.haskellPackages;
   alex = hsPkgs.alex;
-  happy = hsPkgs.happy;
+  happy = hsPkgs.happy_1_20_1_1;
   targetTriple = pkgs.stdenvNoCC.targetPlatform.config;
 
   ghcBindists = let version = ghc.version; in {
