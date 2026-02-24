@@ -52,6 +52,7 @@ spawnWasmInterp WasmInterpConfig {..} = do
   let dyld_env =
         [("GHCI_BROWSER", "1") | wasmInterpBrowser]
         ++ [("GHCI_BROWSER_HOST", wasmInterpBrowserHost), ("GHCI_BROWSER_PORT", show wasmInterpBrowserPort)]
+        ++ [("GHCI_BROWSER_ASSETS_DIR", f) | f <- maybeToList wasmInterpBrowserAssetsDir]
         ++ [("GHCI_BROWSER_REDIRECT_WASI_CONSOLE", "1") | wasmInterpBrowserRedirectWasiConsole]
         ++ [("GHCI_BROWSER_PUPPETEER_LAUNCH_OPTS", f) | f <- maybeToList wasmInterpBrowserPuppeteerLaunchOpts]
         ++ [("GHCI_BROWSER_PLAYWRIGHT_BROWSER_TYPE", f) | f <- maybeToList wasmInterpBrowserPlaywrightBrowserType]

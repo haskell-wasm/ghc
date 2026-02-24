@@ -705,6 +705,7 @@ setTopSessionDynFlags dflags = do
                   wasmInterpBrowser = gopt Opt_GhciBrowser dflags,
                   wasmInterpBrowserHost = ghciBrowserHost dflags,
                   wasmInterpBrowserPort = ghciBrowserPort dflags,
+                  wasmInterpBrowserAssetsDir = ghciBrowserAssetsDir dflags,
                   wasmInterpBrowserRedirectWasiConsole = gopt Opt_GhciBrowserRedirectWasiConsole dflags,
                   wasmInterpBrowserPuppeteerLaunchOpts = ghciBrowserPuppeteerLaunchOpts dflags,
                   wasmInterpBrowserPlaywrightBrowserType = ghciBrowserPlaywrightBrowserType dflags,
