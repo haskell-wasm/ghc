@@ -195,6 +195,7 @@ data WasmInterpConfig = WasmInterpConfig
   , wasmInterpBrowser                      :: !Bool
   , wasmInterpBrowserHost                  :: !String
   , wasmInterpBrowserPort                  :: !Int
+  , wasmInterpBrowserAssetsDir             :: !(Maybe FilePath)
   , wasmInterpBrowserRedirectWasiConsole   :: !Bool
   , wasmInterpBrowserPuppeteerLaunchOpts   :: !(Maybe String)
   , wasmInterpBrowserPlaywrightBrowserType :: !(Maybe String)

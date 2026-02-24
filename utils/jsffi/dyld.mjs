@@ -560,6 +560,7 @@ export class DyLDRPC {
 
 // Actual implementation of endpoints used by DyLDRPC
 class DyLDRPCServer {
+  #mimeDb;
   #dyldHost;
   #server;
   #wss;
@@ -567,6 +568,7 @@ class DyLDRPCServer {
   constructor({
     host,
     port,
+    assetsDir,
     dyldPath,
     searchDirs,
     mainSoPath,
@@ -575,6 +577,20 @@ class DyLDRPCServer {
     args,
     redirectWasiConsole,
   }) {
+    this.#mimeDb = fetch("https://cdn.jsdelivr.net/npm/mime-db@1.54.0/db.json")
+      .then((resp) => resp.json())
+      .then((db) => {
+        const ext2mime = {};
+        for (const mime in db) {
+          if (db[mime].extensions) {
+            for (const ext of db[mime].extensions) {
+              ext2mime[`.${ext}`] = mime;
+            }
+          }
+        }
+        return ext2mime;
+      });
+
     this.#dyldHost = new DyLDHost({ outFd, inFd });
 
     this.#server = http.createServer(async (req, res) => {
@@ -631,6 +647,33 @@ args.rpc.opened.then(() => main(args));
 
         res.writeHead(200);
         fs.createReadStream(p).pipe(res);
+        return;
+      }
+
+      if (req.url.startsWith("/assets")) {
+        const p = path.resolve(
+          assetsDir,
+          new URL(req.url, origin).pathname.replace("/assets/", ""),
+        );
+        try {
+          await fs.promises.access(p, fs.promises.constants.R_OK);
+
+          res.setHeader(
+            "Content-Type",
+            (await this.#mimeDb)[path.extname(p)] || "application/octet-stream",
+          );
+
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+          res.writeHead(200);
+          fs.createReadStream(p).pipe(res);
+        } catch {
+          res.writeHead(404, {
+            "Content-Type": "text/plain",
+          });
+          res.end("not found");
+        }
+
         return;
       }
 
@@ -1373,6 +1416,7 @@ async function nodeMain({ searchDirs, mainSoPath, outFd, inFd, args }) {
   const server = new DyLDRPCServer({
     host: process.env.GHCI_BROWSER_HOST || "127.0.0.1",
     port: process.env.GHCI_BROWSER_PORT || 0,
+    assetsDir: process.env.GHCI_BROWSER_ASSETS_DIR || process.cwd(),
     dyldPath: import.meta.filename,
     searchDirs,
     mainSoPath,
