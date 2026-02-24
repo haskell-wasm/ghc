@@ -193,6 +193,18 @@ See below for other optional GHC flags of wasm ghci browser mode:
     Specify the port that the ``dyld`` HTTP server should listen on.
     Defaults to a random idle port.
 
+.. ghc-flag:: -fghci-browser-assets-dir
+    :shortdesc: User-specified assets root directory
+    :type: dynamic
+
+    :default: ``$PWD``
+
+    The HTTP server also exposes an ``/assets`` endpoint that allows
+    the users to fetch custom assets with sensible default MIME type,
+    e.g. `http://127.0.0.1:8080/assets/index.html` would fetch
+    `index.html` in the assets root directory with ``text/html`` MIME
+    type.
+
 .. ghc-flag:: -fghci-browser-redirect-wasi-console
     :shortdesc: Redirect wasi console stdout/stderr back to host ghci.
     :type: dynamic
