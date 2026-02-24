@@ -412,6 +412,7 @@ data DynFlags = DynFlags {
   -- wasm ghci browser mode
   ghciBrowserHost                  :: !String,
   ghciBrowserPort                  :: !Int,
+  ghciBrowserAssetsDir             :: !(Maybe FilePath),
   ghciBrowserPuppeteerLaunchOpts   :: !(Maybe String),
   ghciBrowserPlaywrightBrowserType :: !(Maybe String),
   ghciBrowserPlaywrightLaunchOpts  :: !(Maybe String),
@@ -703,6 +704,7 @@ defaultDynFlags mySettings =
 
         ghciBrowserHost = "127.0.0.1",
         ghciBrowserPort = 0,
+        ghciBrowserAssetsDir = Nothing,
         ghciBrowserPuppeteerLaunchOpts = Nothing,
         ghciBrowserPlaywrightBrowserType = Nothing,
         ghciBrowserPlaywrightLaunchOpts = Nothing,

@@ -1858,6 +1858,8 @@ dynamic_flags_deps = [
       $ hasArg $ \f d -> d { ghciBrowserHost = f }
   , make_ord_flag defGhciFlag "fghci-browser-port"
       $ intSuffix $ \n d -> d { ghciBrowserPort = n }
+  , make_ord_flag defGhciFlag "fghci-browser-assets-dir"
+      $ hasArg $ \f d -> d { ghciBrowserAssetsDir = Just f }
   , make_ord_flag defGhciFlag "fghci-browser-puppeteer-launch-opts"
       $ hasArg $ \f d -> d { ghciBrowserPuppeteerLaunchOpts = Just f }
   , make_ord_flag defGhciFlag "fghci-browser-playwright-browser-type"
