@@ -442,8 +442,9 @@ tcFExport d = pprPanic "tcFExport" (ppr d)
 
 tcCheckFEType :: Type -> ForeignExport GhcRn -> TcM (ForeignExport GhcTc)
 tcCheckFEType sig_ty edecl@(CExport src (L l (CExportStatic esrc str cconv))) = do
-    checkCg (Left edecl) backendValidityOfCExport
-    when (cconv /= JavaScriptCallConv) $ checkTc (isCLabelString str) (TcRnInvalidCIdentifier str)
+    when (cconv /= JavaScriptCallConv) $ do
+      checkCg (Left edecl) backendValidityOfCExport
+      checkTc (isCLabelString str) (TcRnInvalidCIdentifier str)
     cconv' <- checkCConv (Left edecl) cconv
     checkForeignArgs isFFIExternalTy arg_tys
     checkForeignRes nonIOok noCheckSafe isFFIExportResultTy res_ty
