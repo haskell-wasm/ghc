@@ -36,6 +36,8 @@ compileAndLinkHs = (builder (Ghc CompileHs) ||^ builder (Ghc LinkHs)) ? do
     useColor <- shakeColor <$> expr getShakeOptions
     let hasVanilla = elem vanilla ways
         hasDynamic = elem dynamic ways
+        hasProfiling = elem profiling ways
+        hasProfilingDynamic = elem profilingDynamic ways
     mconcat [ arg "-Wall"
             , arg "-Wcompat"
             , not useColor ? builder (Ghc CompileHs) ?
@@ -46,6 +48,12 @@ compileAndLinkHs = (builder (Ghc CompileHs) ||^ builder (Ghc LinkHs)) ? do
             , (hasVanilla && hasDynamic) ? builder (Ghc CompileHs) ?
               platformSupportsSharedLibs ? way vanilla ?
               arg "-dynamic-too"
+            , (hasProfiling && hasProfilingDynamic) ? builder (Ghc CompileHs) ?
+              platformSupportsSharedLibs ? way profiling ? mconcat
+              [ arg "-dynamic-too"
+              , arg "-dynosuf", arg $ osuf profilingDynamic
+              , arg "-dynhisuf", arg $ hisuf profilingDynamic
+              ]
             , commonGhcArgs
             , ghcLinkArgs
             , defaultGhcWarningsArgs
