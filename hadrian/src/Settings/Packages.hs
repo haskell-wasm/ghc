@@ -406,9 +406,6 @@ rtsPackageArgs = package rts ? do
                    , "**/PrimOps.c", "**/Apply.c"
                    , "**/AutoApply.c" ] ? pure ["-fno-PIC", "-static"]
 
-          -- inlining warnings happen in Compact
-          , inputs ["**/Compact.c"] ? arg "-Wno-inline"
-
           -- emits warnings about call-clobbered registers on x86_64
           , inputs [ "**/StgCRun.c"
                    , "**/win32/ConsoleHandler.c", "**/win32/ThrIOManager.c"] ? arg "-w"
@@ -508,7 +505,6 @@ rtsWarnings = mconcat
     , arg "-Wstrict-prototypes"
     , arg "-Wmissing-prototypes"
     , arg "-Wmissing-declarations"
-    , arg "-Winline"
     , arg "-Wpointer-arith"
     , arg "-Wmissing-noreturn"
     , arg "-Wnested-externs"
