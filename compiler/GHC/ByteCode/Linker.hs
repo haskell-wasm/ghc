@@ -30,7 +30,7 @@ import GHC.Builtin.Names
 import GHC.Unit.Types
 
 import GHC.Data.FastString
-import GHC.Data.SizedSeq
+import GHC.Data.SmallArray
 
 import GHC.Linker.Types
 
@@ -65,13 +65,13 @@ linkBCO interp pkgs_loaded le bco_ix
   -- fromIntegral Word -> Word64 should be a no op if Word is Word64
   -- otherwise it will result in a cast to longlong on 32bit systems.
   (lits :: [Word]) <- mapM (fmap fromIntegral . lookupLiteral interp pkgs_loaded le) (elemsFlatBag lits0)
-  ptrs <- mapM (resolvePtr interp pkgs_loaded le bco_ix) (elemsFlatBag ptrs0)
+  ptrs <- smallArrayFromList <$> mapM (resolvePtr interp pkgs_loaded le bco_ix) (elemsFlatBag ptrs0)
   let lits' = listArray (0 :: Int, fromIntegral (sizeFlatBag lits0)-1) lits
   return (ResolvedBCO isLittleEndian arity
               insns
               bitmap
               (mkBCOByteArray lits')
-              (addListToSS emptySS ptrs))
+              ptrs)
 
 lookupLiteral :: Interp -> PkgsLoaded -> LinkerEnv -> BCONPtr -> IO Word
 lookupLiteral interp pkgs_loaded le ptr = case ptr of
