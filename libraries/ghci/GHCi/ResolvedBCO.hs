@@ -12,7 +12,7 @@ module GHCi.ResolvedBCO
 #include "MachDeps.h"
 
 import Prelude -- See note [Why do we import Prelude here?]
-import GHC.Data.SizedSeq
+import GHC.Data.SmallArray
 import GHCi.RemoteTypes
 import GHCi.BreakArray
 
@@ -51,12 +51,13 @@ isLittleEndian = True
 --
 data ResolvedBCO
    = ResolvedBCO {
-        resolvedBCOIsLE   :: Bool,
+        resolvedBCOIsLE   :: !Bool,
         resolvedBCOArity  :: {-# UNPACK #-} !Int,
-        resolvedBCOInstrs :: BCOByteArray Word16,       -- insns
-        resolvedBCOBitmap :: BCOByteArray Word,         -- bitmap
-        resolvedBCOLits   :: BCOByteArray Word,         -- non-ptrs
-        resolvedBCOPtrs   :: (SizedSeq ResolvedBCOPtr)  -- ptrs
+        resolvedBCOInstrs :: !(BCOByteArray Word16),       -- ^ insns
+        resolvedBCOBitmap :: !(BCOByteArray Word),         -- ^ bitmap
+        resolvedBCOLits   :: !(BCOByteArray Word),
+          -- ^ non-ptrs - subword sized entries still take up a full (host) word
+        resolvedBCOPtrs   :: !(SmallArray ResolvedBCOPtr)  -- ^ ptrs
    }
    deriving (Generic, Show)
 
