@@ -23,6 +23,7 @@ module GHC.HsToCore.Breakpoints
 
 import GHC.Prelude
 import Data.Array
+import qualified Data.ByteString.Short as SBS
 
 import GHC.HsToCore.Ticks (Tick (..))
 import GHC.HsToCore.Breakpoints.Types
@@ -31,6 +32,8 @@ import GHC.Unit.Module (Module)
 import GHC.Utils.Outputable
 import Data.List (intersperse)
 import GHC.Utils.Binary (BinSrcSpan(BinSrcSpan))
+import GHC.Utils.Encoding (utf8EncodeShortByteString)
+
 -- | Initialize memory for breakpoint data that is shared between the bytecode
 -- generator and the interpreter.
 --
@@ -50,8 +53,8 @@ mkModBreaks interpreterProfiled modl extendedMixEntries
           | interpreterProfiled =
               listArray
                 (0, count - 1)
-                [ ( concat $ intersperse "." $ tick_path t,
-                    renderWithContext defaultSDocContext $ ppr $ tick_loc t
+                [ ( utf8EncodeShortByteString $ concat $ intersperse "." $ tick_path t,
+                    utf8EncodeShortByteString $ renderWithContext defaultSDocContext $ ppr $ tick_loc t
                   )
                 | t <- entries
                 ]
