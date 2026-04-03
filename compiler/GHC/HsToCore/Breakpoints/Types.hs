@@ -23,6 +23,7 @@ module GHC.HsToCore.Breakpoints.Types
 
 import GHC.Prelude
 import Data.Array
+import qualified Data.ByteString.Short as SBS
 
 import GHC.Types.SrcLoc (SrcSpan)
 import GHC.Types.Name (OccName)
@@ -56,7 +57,7 @@ data ModBreaks
    , modBreaks_decls  :: !(Array BreakTickIndex [String])
         -- ^ An array giving the names of the declarations enclosing each breakpoint.
         -- See Note [Field modBreaks_decls]
-   , modBreaks_ccs    :: !(Array BreakTickIndex (String, String))
+   , modBreaks_ccs    :: !(Array BreakTickIndex (SBS.ShortByteString, SBS.ShortByteString))
         -- ^ Array pointing to cost centre info for each breakpoint;
         -- actual 'CostCentre' allocation is done at link-time.
    , modBreaks_module :: !Module
