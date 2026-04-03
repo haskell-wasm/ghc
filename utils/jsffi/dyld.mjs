@@ -1240,6 +1240,13 @@ class DyLD {
     }
     return 0;
   }
+
+  lookupSymbolPtr(symPtr, symLen) {
+    const sym = new TextDecoder("utf-8", { fatal: true }).decode(
+      new Uint8Array(this.#memory.buffer, symPtr, symLen)
+    );
+    return this.lookupSymbol(sym);
+  }
 }
 
 // The main entry point of dyld that may be run on node/browser, and
