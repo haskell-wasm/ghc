@@ -38,3 +38,11 @@ test('AtomicFetch',
      ],
      multi_compile_and_run,
      ['AtomicFetch', [('AtomicFetch_cmm.cmm', '')], ''])
+
+test('T27447',
+     [ req_cmm
+     , extra_ways(['optasm'])
+     , when(have_llvm(), extra_ways(['optasm', 'optllvm']))
+     ],
+     multi_compile_and_run,
+     ['T27447', [('T27447_cmm.cmm', '')], ''])
