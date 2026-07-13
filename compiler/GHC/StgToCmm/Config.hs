@@ -72,7 +72,7 @@ data StgToCmmConfig = StgToCmmConfig
   , stgToCmmAllowIntMul2Instr         :: !Bool   -- ^ Allowed to generate IntMul2 instruction
   , stgToCmmAllowWordMul2Instr        :: !Bool   -- ^ Allowed to generate WordMul2 instruction
   , stgToCmmAllowFMAInstr             :: FMASign -> Bool -- ^ Allowed to generate FMA instruction
-  , stgToCmmTickyAP                   :: !Bool   -- ^ Disable use of precomputed standard thunks.
+  , stgToCmmUseStdApThunk             :: !Bool   -- ^ Use precomputed standard AP thunks in the RTS.
   , stgToCmmSaveFCallTargetToLocal    :: !Bool   -- ^ Save a foreign call target to a Cmm local, see
                                                  -- Note [Saving foreign call target to local] for details
   ------------------------------ SIMD flags ------------------------------------
