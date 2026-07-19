@@ -44,8 +44,8 @@ static Arena *prof_arena;
  * closure_cats
  */
 
-static unsigned int CC_ID  = 1;
-static unsigned int CCS_ID = 1;
+static StgInt CC_ID  = 1;
+static StgInt CCS_ID = 1;
 
 /* Globals for opening the profiling log file(s)
  */
