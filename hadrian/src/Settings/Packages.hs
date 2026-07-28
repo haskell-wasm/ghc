@@ -187,7 +187,7 @@ packageArgs = do
 
         ---------------------------------- text --------------------------------
         , package text ?
-            ifM (textWithSIMDUTF <$> expr flavour)
+            ifM (notStage0 &&^ (textWithSIMDUTF <$> expr flavour))
               (builder (Cabal Flags) ? arg "+simdutf")
               (builder (Cabal Flags) ? arg "-simdutf")
 
