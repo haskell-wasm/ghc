@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NondecreasingIndentation #-}
 {-# LANGUAGE GADTs #-}
@@ -95,7 +96,10 @@ module GHC.Driver.Main
     , hscCompileCoreExpr'
       -- We want to make sure that we export enough to be able to redefine
       -- hsc_typecheck in client code
-    , hscParse', hscSimplify', hscDesugar', tcRnModule', doCodeGen
+    , hscParse', hscSimplify', hscDesugar', tcRnModule'
+#if !defined(wasm32_HOST_ARCH)
+    , doCodeGen
+#endif
     , getHscEnv
     , hscSimpleIface'
     , oneShotMsg
@@ -120,8 +124,11 @@ import GHC.Driver.Env.KnotVars
 import GHC.Driver.Errors
 import GHC.Driver.Messager
 import GHC.Driver.Errors.Types
-import GHC.Driver.CodeOutput
+import GHC.Driver.CodeOutput (outputForeignStubs)
+#if !defined(wasm32_HOST_ARCH)
+import GHC.Driver.CodeOutput (codeOutput, profilingInitCode, ipInitCode)
 import GHC.Driver.Config.Cmm.Parser (initCmmParserConfig)
+#endif
 import GHC.Driver.Config.Core.Opt.Simplify ( initSimplifyExprOpts )
 import GHC.Driver.Config.Core.Lint ( endPassHscEnvIO )
 import GHC.Driver.Config.Core.Lint.Interactive ( lintInteractiveExpr )
@@ -131,14 +138,18 @@ import GHC.Driver.Config.Logger   (initLogFlags)
 import GHC.Driver.Config.Parser   (initParserOpts)
 import GHC.Driver.Config.Stg.Ppr  (initStgPprOpts)
 import GHC.Driver.Config.Stg.Pipeline (initStgPipelineOpts)
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Driver.Config.StgToCmm  (initStgToCmmConfig)
 import GHC.Driver.Config.Cmm       (initCmmConfig)
+#endif
 import GHC.Driver.LlvmConfigCache  (initLlvmConfigCache)
 import GHC.Driver.Config.StgToJS  (initStgToJSConfig)
 import GHC.Driver.Config.Diagnostic
 import GHC.Driver.Config.Tidy
 import GHC.Driver.Hooks
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Driver.GenerateCgIPEStub (generateCgIPEStub, lookupEstimatedTicks)
+#endif
 
 import GHC.Runtime.Context
 import GHC.Runtime.Interpreter
@@ -186,8 +197,10 @@ import GHC.Core.InstEnv
 import GHC.Core.FamInstEnv
 import GHC.Core.Rules
 import GHC.Core.Stats
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Core.LateCC
 import GHC.Core.LateCC.Types
+#endif
 
 
 import GHC.CoreToStg.Prep( CorePrepPgmConfig, corePrepPgm, corePrepExpr )
@@ -208,6 +221,9 @@ import GHC.Stg.Pipeline ( stg2stg, StgCgInfos )
 
 import GHC.Builtin.Names
 
+#if defined(wasm32_HOST_ARCH)
+import GHC.StgToCmm.Types (CmmCgInfos)
+#else
 import qualified GHC.StgToCmm as StgToCmm ( codeGen )
 import GHC.StgToCmm.Types (CmmCgInfos (..), ModuleLFInfos, LambdaFormInfo(..))
 import GHC.StgToCmm.CgUtils (CgStream)
@@ -218,6 +234,7 @@ import GHC.Cmm.Pipeline
 import GHC.Cmm.Info
 import GHC.Cmm.Parser
 import GHC.Cmm.UniqueRenamer
+#endif
 
 import GHC.Unit
 import GHC.Unit.Env
@@ -236,7 +253,9 @@ import GHC.Types.Id
 import GHC.Types.SourceError
 import GHC.Types.SafeHaskell
 import GHC.Types.ForeignStubs
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.Name.Env      ( mkNameEnv )
+#endif
 import GHC.Types.Var.Env       ( mkEmptyTidyEnv )
 import GHC.Types.Var.Set
 import GHC.Types.Error
@@ -266,9 +285,13 @@ import qualified GHC.LanguageExtensions as LangExt
 
 import GHC.Data.FastString
 import GHC.Data.Bag
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Data.OsPath (unsafeEncodeUtf)
+#endif
 import GHC.Data.StringBuffer
+#if !defined(wasm32_HOST_ARCH)
 import qualified GHC.Data.Stream as Stream
+#endif
 import GHC.Data.Maybe
 
 import GHC.SysTools (initSysTools)
@@ -283,7 +306,9 @@ import Data.IORef
 import System.FilePath as FilePath
 import System.Directory
 import qualified Data.Map as M
+#if !defined(wasm32_HOST_ARCH)
 import Data.Map (Map)
+#endif
 import qualified Data.Set as S
 import Data.Set (Set)
 import Control.DeepSeq (force)
@@ -297,12 +322,14 @@ import Data.Time
 import System.IO.Unsafe ( unsafeInterleaveIO )
 import GHC.Iface.Env ( trace_if )
 import GHC.Platform.Ways
+import GHC.Types.Unique.DFM
+#if !defined(wasm32_HOST_ARCH)
+import GHC.Types.Unique.FM
 import GHC.Stg.EnforceEpt.TagSig (seqTagSig)
 import GHC.StgToCmm.Utils (IPEStats)
-import GHC.Types.Unique.FM
-import GHC.Types.Unique.DFM
 import GHC.Cmm.Config (CmmConfig)
 import Data.Bifunctor
+#endif
 import qualified GHC.Unit.Home.Graph as HUG
 import GHC.Unit.Home.PackageTable
 
@@ -1921,6 +1948,10 @@ hscSimpleIface' mb_core_program mb_modBreaks tc_result summary = do
 hscGenHardCode :: HscEnv -> CgGuts -> ModLocation -> FilePath
                -> IO (FilePath, Maybe FilePath, [(ForeignSrcLang, FilePath)], Maybe StgCgInfos, Maybe CmmCgInfos )
                 -- ^ @Just f@ <=> _stub.c is f
+#if defined(wasm32_HOST_ARCH)
+hscGenHardCode _ _ _ _ =
+    throwGhcExceptionIO (ProgramError "object code generation is not supported on wasm32 hosts")
+#else
 hscGenHardCode hsc_env cgguts mod_loc output_filename = do
         let CgGuts{ cg_module   = this_mod,
                     cg_binds    = core_binds,
@@ -2102,6 +2133,7 @@ hscGenHardCode hsc_env cgguts mod_loc output_filename = do
                     foreign_stubs foreign_files dependencies (initDUniqSupply 'n' 0) rawcmms1
               return  ( output_filename, stub_c_exists, foreign_fps
                       , Just stg_cg_infos, Just cmm_cg_infos)
+#endif
 
 
 -- The part of CgGuts that we need for HscInteractive
@@ -2195,6 +2227,10 @@ generateFreshByteCode hsc_env mod_name cgguts mod_location = do
 ------------------------------
 
 hscCompileCmmFile :: HscEnv -> FilePath -> FilePath -> FilePath -> IO (Maybe FilePath)
+#if defined(wasm32_HOST_ARCH)
+hscCompileCmmFile _ _ _ _ =
+    throwGhcExceptionIO (ProgramError "Cmm compilation is not supported on wasm32 hosts")
+#else
 hscCompileCmmFile hsc_env original_filename filename output_filename = runHsc hsc_env $ do
     let dflags   = hsc_dflags hsc_env
         logger   = hsc_logger hsc_env
@@ -2371,6 +2407,7 @@ doCodeGen hsc_env this_mod denv tycons
           return a
 
     return $ Stream.mapM (liftIO . dump2) pipeline_stream
+#endif
 
 myCoreToStg :: Logger -> DynFlags -> [Var]
             -> Bool
