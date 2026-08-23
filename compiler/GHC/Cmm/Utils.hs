@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
@@ -14,6 +15,9 @@ module GHC.Cmm.Utils(
         primRepCmmType, slotCmmType,
         typeCmmType, typeForeignHint, primRepForeignHint,
 
+        mAX_PTR_TAG, tAG_MASK,
+
+#if !defined(wasm32_HOST_ARCH)
         -- CmmLit
         zeroCLit, mkIntCLit,
         mkWordCLit, packHalfWordsCLit,
@@ -45,7 +49,7 @@ module GHC.Cmm.Utils(
 
         -- Tagging
         cmmTagMask, cmmPointerMask, cmmUntag, cmmIsTagged, cmmIsNotTagged,
-        cmmConstrTag1, mAX_PTR_TAG, tAG_MASK,
+        cmmConstrTag1,
 
         -- Overlap and usage
         regsOverlap, globalRegsOverlap, regUsedIn, globalRegUsedIn,
@@ -63,29 +67,29 @@ module GHC.Cmm.Utils(
 
         -- * Ticks
         blockTicks
+#endif
   ) where
 
 import GHC.Prelude
-
 import GHC.Core.TyCon     ( PrimRep(..), PrimElemRep(..) )
 import GHC.Types.RepType  ( NvUnaryType, SlotTy (..), typePrimRepU )
-
 import GHC.Platform
-import GHC.Runtime.Heap.Layout
 import GHC.Cmm
+#if !defined(wasm32_HOST_ARCH)
+import GHC.Runtime.Heap.Layout
 import GHC.Cmm.BlockId
 import GHC.Cmm.CLabel
 import GHC.Utils.Outputable
 import GHC.Utils.Panic
 import GHC.Types.Unique
 import GHC.Platform.Regs
-
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Foldable (toList)
 import GHC.Cmm.Dataflow.Graph
 import GHC.Cmm.Dataflow.Label
 import GHC.Cmm.Dataflow.Block
+#endif
 
 ---------------------------------------------------
 --
@@ -156,6 +160,7 @@ primRepForeignHint (VecRep {})  = NoHint
 typeForeignHint :: NvUnaryType -> ForeignHint
 typeForeignHint = primRepForeignHint . typePrimRepU
 
+#if !defined(wasm32_HOST_ARCH)
 ---------------------------------------------------
 --
 --      CmmLit
@@ -397,12 +402,15 @@ cmmMkAssign platform expr uq =
 --
 ---------------------------------------------------
 
+#endif
+
 tAG_MASK :: Platform -> Int
 tAG_MASK platform = (1 `shiftL` pc_TAG_BITS (platformConstants platform)) - 1
 
 mAX_PTR_TAG :: Platform -> Int
 mAX_PTR_TAG = tAG_MASK
 
+#if !defined(wasm32_HOST_ARCH)
 -- Tag bits mask
 cmmTagMask, cmmPointerMask :: Platform -> CmmExpr
 cmmTagMask platform = mkIntExpr platform (tAG_MASK platform)
@@ -598,3 +606,4 @@ currentNurseryExpr p = CmmReg $ currentNurseryReg p
 cccsExpr           p = CmmReg $ cccsReg           p
 myCapabilityExpr   p =
   cmmRegOff (baseReg p) $ negate $ pc_OFFSET_Capability_r $ platformConstants p
+#endif

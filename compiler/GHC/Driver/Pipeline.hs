@@ -56,7 +56,9 @@ import GHC.Driver.Errors
 import GHC.Driver.Errors.Types
 import GHC.Driver.Pipeline.Monad
 import GHC.Driver.Config.Diagnostic
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Driver.Config.StgToJS
+#endif
 import GHC.Driver.Phases
 import GHC.Driver.Pipeline.Execute
 import GHC.Driver.Pipeline.Phases
@@ -76,7 +78,9 @@ import GHC.Linker.Static
 import GHC.Linker.Static.Utils
 import GHC.Linker.Types
 
+#if !defined(wasm32_HOST_ARCH)
 import GHC.StgToJS.Linker.Linker
+#endif
 
 import GHC.Utils.Outputable
 import GHC.Utils.Error
@@ -460,12 +464,17 @@ link' logger tmpfs fc dflags unit_env batch_attempt_linking mHscMessager hpt
 
 
 linkJSBinary :: Logger -> TmpFs -> FinderCache -> DynFlags -> UnitEnv -> [FilePath] -> [UnitId] -> IO ()
+#if defined(wasm32_HOST_ARCH)
+linkJSBinary _ _ _ _ _ _ _ =
+  throwGhcExceptionIO (ProgramError "JavaScript linking is not supported on wasm32 hosts")
+#else
 linkJSBinary logger tmpfs fc dflags unit_env obj_files pkg_deps = do
   -- we use the default configuration for now. In the future we may expose
   -- settings to the user via DynFlags.
   let lc_cfg   = initJSLinkConfig dflags
   let cfg      = initStgToJSConfig dflags
   jsLinkBinary fc lc_cfg cfg logger tmpfs dflags unit_env obj_files pkg_deps
+#endif
 
 linkingNeeded :: Logger -> DynFlags -> UnitEnv -> Bool -> [Linkable] -> [UnitId] -> IO RecompileRequired
 linkingNeeded logger dflags unit_env staticLink linkables pkg_deps = do

@@ -1,4 +1,5 @@
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -31,10 +32,12 @@ module GHC.StgToCmm.Closure (
         mkLFStringLit,
         lfDynTag,
         isLFThunk, isLFReEntrant, lfUpdatable,
+        tagForArity,
 
+#if !defined(wasm32_HOST_ARCH)
         -- * Used by other modules
         CgLoc(..), CallMethod(..),
-        nodeMustPointToIt, isKnownFun, funTag, tagForArity,
+        nodeMustPointToIt, isKnownFun, funTag,
         getCallMethod,
 
         -- * ClosureInfo
@@ -65,29 +68,38 @@ module GHC.StgToCmm.Closure (
         indStaticInfoTable,
         staticClosureNeedsLink,
         mkClosureInfoTableLabel
+#endif
     ) where
 
 import GHC.Prelude
 import GHC.Platform
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Platform.Profile
+#endif
 
 import GHC.Stg.Syntax
 import GHC.Runtime.Heap.Layout
+import GHC.Cmm.Utils (mAX_PTR_TAG)
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Cmm
-import GHC.Cmm.Utils
-import GHC.StgToCmm.Types
 import GHC.StgToCmm.Sequel
 
 import GHC.Types.CostCentre
 import GHC.Cmm.BlockId
 import GHC.Cmm.CLabel
+#endif
+import GHC.StgToCmm.Types
 import GHC.Types.Id
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.Id.Info
+#endif
 import GHC.Core.DataCon
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.Name
-import GHC.Core.Type
 import GHC.Core.TyCo.Rep
 import GHC.Tc.Utils.TcType
+#endif
+import GHC.Core.Type
 import GHC.Core.TyCon
 import GHC.Types.RepType
 import GHC.Types.Basic
@@ -96,6 +108,7 @@ import GHC.Utils.Panic
 import GHC.Data.Maybe (isNothing)
 
 import Data.Coerce (coerce)
+#if !defined(wasm32_HOST_ARCH)
 import qualified Data.ByteString.Char8 as BS8
 import GHC.StgToCmm.Config
 import GHC.Stg.EnforceEpt.TagSig (isTaggedSig)
@@ -131,6 +144,7 @@ isKnownFun :: LambdaFormInfo -> Bool
 isKnownFun LFReEntrant{} = True
 isKnownFun LFLetNoEscape = True
 isKnownFun _             = False
+#endif
 
 
 -------------------------------------
@@ -379,6 +393,11 @@ isLFReEntrant :: LambdaFormInfo -> Bool
 isLFReEntrant (LFReEntrant {}) = True
 isLFReEntrant _                = False
 
+lfUpdatable :: LambdaFormInfo -> Bool
+lfUpdatable (LFThunk _ _ upd _ _)  = upd
+lfUpdatable _ = False
+
+#if !defined(wasm32_HOST_ARCH)
 -----------------------------------------------------------------------------
 --                Choosing SM reps
 -----------------------------------------------------------------------------
@@ -822,10 +841,6 @@ isStaticClosure cl_info = isStaticRep (closureSMRep cl_info)
 closureUpdReqd :: ClosureInfo -> Bool
 closureUpdReqd ClosureInfo{ closureLFInfo = lf_info } = lfUpdatable lf_info
 
-lfUpdatable :: LambdaFormInfo -> Bool
-lfUpdatable (LFThunk _ _ upd _ _)  = upd
-lfUpdatable _ = False
-
 closureReEntrant :: ClosureInfo -> Bool
 closureReEntrant (ClosureInfo { closureLFInfo = LFReEntrant {} }) = True
 closureReEntrant _ = False
@@ -1004,3 +1019,5 @@ staticClosureNeedsLink :: Bool -> CmmInfoTable -> Bool
 staticClosureNeedsLink has_srt CmmInfoTable{ cit_rep = smrep }
   | isConRep smrep         = not (isStaticNoCafCon smrep)
   | otherwise              = has_srt
+
+#endif

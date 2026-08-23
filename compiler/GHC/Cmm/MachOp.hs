@@ -1,7 +1,10 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 
 module GHC.Cmm.MachOp
-    ( MachOp(..)
+    ( FMASign(..), pprFMASign
+#if !defined(wasm32_HOST_ARCH)
+    , MachOp(..)
     , pprMachOp, isCommutableMachOp, isAssociativeMachOp
     , isComparisonMachOp, maybeIntComparison, machOpResultType
     , machOpArgReps, maybeInvertComparison, isFloatComparison
@@ -28,20 +31,20 @@ module GHC.Cmm.MachOp
     , MemoryOrdering(..)
     , AtomicMachOp(..)
 
-    -- Fused multiply-add
-    , FMASign(..), pprFMASign
+#endif
    )
 where
 
 import GHC.Prelude
-
+import GHC.Utils.Outputable
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Platform
 import GHC.Cmm.Type
-import GHC.Utils.Outputable
 import GHC.Utils.Misc (expectNonEmpty)
-
 import Data.List.NonEmpty (NonEmpty (..))
+#endif
 
+#if !defined(wasm32_HOST_ARCH)
 -----------------------------------------------------------------------------
 --              MachOp
 -----------------------------------------------------------------------------
@@ -207,6 +210,8 @@ data MachOp
 pprMachOp :: MachOp -> SDoc
 pprMachOp mo = text (show mo)
 
+#endif
+
 -- | Where are the signs in a fused multiply-add instruction?
 --
 -- @x*y + z@ vs @x*y - z@ vs @-x*y+z@ vs @-x*y-z@.
@@ -232,6 +237,7 @@ pprFMASign = \case
   FNMAdd -> text "fnmadd"
   FNMSub -> text "fnmsub"
 
+#if !defined(wasm32_HOST_ARCH)
 -- -----------------------------------------------------------------------------
 -- Some common MachReps
 
@@ -995,3 +1001,4 @@ callishMachOpArgTys platform = \case
   MO_ResumeThread -> []
   where
     addr = bWord platform
+#endif

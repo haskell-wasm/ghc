@@ -41,12 +41,16 @@ import GHC.Fingerprint
 import GHC.Utils.Logger
 import GHC.Utils.TmpFs
 import GHC.Platform
+#if !defined(wasm32_HOST_ARCH)
 import Data.List (intercalate, isInfixOf)
 import qualified Data.List.NonEmpty as NE
+#endif
 import GHC.Unit.Env
 import GHC.Utils.Error
 import Data.Maybe
+#if !defined(wasm32_HOST_ARCH)
 import GHC.CmmToLlvm.Mangler
+#endif
 import GHC.SysTools
 import GHC.SysTools.Cpp
 import System.Directory
@@ -66,10 +70,12 @@ import GHC.Types.SourceError
 import GHC.Unit.Finder
 import Data.IORef
 import GHC.Types.Name.Env
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Platform.Ways
 import GHC.Driver.LlvmConfigCache (readLlvmConfigCache)
 import GHC.CmmToLlvm.Config (LlvmTarget (..), LlvmConfig (..))
 import GHC.CmmToLlvm.Version.Type (LlvmVersion (..))
+#endif
 import {-# SOURCE #-} GHC.Driver.Pipeline (compileForeign, compileEmptyStub)
 import GHC.Settings
 import System.IO
@@ -81,7 +87,9 @@ import GHC.Unit.Module.Env
 import GHC.Driver.Env.KnotVars
 import GHC.Driver.Config.Finder
 import GHC.Rename.Names
+#if !defined(wasm32_HOST_ARCH)
 import GHC.StgToJS.Linker.Linker (embedJsFile)
+#endif
 
 import Language.Haskell.Syntax.Module.Name
 import GHC.Unit.Home.ModInfo
@@ -147,6 +155,16 @@ runPhase (T_Cmm pipe_env hsc_env input_fn) = do
 runPhase (T_Cc phase pipe_env hsc_env location input_fn) = runCcPhase phase pipe_env hsc_env location input_fn
 runPhase (T_As cpp pipe_env hsc_env location input_fn) = do
   runAsPhase cpp pipe_env hsc_env location input_fn
+#if defined(wasm32_HOST_ARCH)
+runPhase (T_LlvmOpt _ _ _) =
+  throwGhcExceptionIO (ProgramError "LLVM optimization is not supported on wasm32 hosts")
+runPhase (T_LlvmLlc _ _ _) =
+  throwGhcExceptionIO (ProgramError "LLVM compilation is not supported on wasm32 hosts")
+runPhase (T_LlvmAs _ _ _ _ _) =
+  throwGhcExceptionIO (ProgramError "LLVM assembly is not supported on wasm32 hosts")
+runPhase (T_LlvmMangle _ _ _) =
+  throwGhcExceptionIO (ProgramError "LLVM assembly mangling is not supported on wasm32 hosts")
+#else
 runPhase (T_LlvmOpt pipe_env hsc_env input_fn) =
   runLlvmOptPhase pipe_env hsc_env input_fn
 runPhase (T_LlvmLlc pipe_env hsc_env input_fn) =
@@ -155,9 +173,11 @@ runPhase (T_LlvmAs cpp pipe_env hsc_env location input_fn) = do
   runLlvmAsPhase cpp pipe_env hsc_env location input_fn
 runPhase (T_LlvmMangle pipe_env hsc_env input_fn) =
   runLlvmManglePhase pipe_env hsc_env input_fn
+#endif
 runPhase (T_MergeForeign pipe_env hsc_env input_fn fos) =
   runMergeForeign pipe_env hsc_env input_fn fos
 
+#if !defined(wasm32_HOST_ARCH)
 runLlvmManglePhase :: PipeEnv -> HscEnv -> FilePath -> IO [Char]
 runLlvmManglePhase pipe_env hsc_env input_fn = do
       let next_phase = As False
@@ -165,6 +185,7 @@ runLlvmManglePhase pipe_env hsc_env input_fn = do
       let dflags = hsc_dflags hsc_env
       llvmFixupAsm (targetPlatform dflags) input_fn output_fn
       return output_fn
+#endif
 
 runMergeForeign :: PipeEnv -> HscEnv -> FilePath -> [FilePath] -> IO FilePath
 runMergeForeign _pipe_env hsc_env input_fn foreign_os = do
@@ -181,6 +202,7 @@ runMergeForeign _pipe_env hsc_env input_fn foreign_os = do
          joinObjectFiles hsc_env (new_o : foreign_os) input_fn
          return input_fn
 
+#if !defined(wasm32_HOST_ARCH)
 runLlvmLlcPhase :: PipeEnv -> HscEnv -> FilePath -> IO FilePath
 runLlvmLlcPhase pipe_env hsc_env input_fn = do
     llvm_config <- readLlvmConfigCache (hsc_llvm_config hsc_env)
@@ -251,6 +273,7 @@ runLlvmOptPhase pipe_env hsc_env input_fn = do
                 )
 
     return output_fn
+#endif
 
 
 -- Run either 'clang' or 'gcc' phases
@@ -311,10 +334,12 @@ runGenericAsPhase run_as extra_opts with_cpp pipe_env hsc_env location input_fn 
 
         return output_fn
 
+#if !defined(wasm32_HOST_ARCH)
 -- Invoke `clang` to assemble a .S file produced by LLvm toolchain
 runLlvmAsPhase :: Bool -> PipeEnv -> HscEnv -> Maybe ModLocation -> FilePath -> IO FilePath
 runLlvmAsPhase =
   runGenericAsPhase runLlvmAs [ GHC.SysTools.Option "-Wno-unused-command-line-argument" ]
+#endif
 
 -- Invoke 'gcc' to assemble a .S file
 runAsPhase :: Bool -> PipeEnv -> HscEnv -> Maybe ModLocation -> FilePath -> IO FilePath
@@ -359,6 +384,10 @@ runJsPhase _pipe_env _hsc_env _location input_fn = do
 
 -- | Deal with foreign JS files (embed them into .o files)
 runForeignJsPhase :: PipeEnv -> HscEnv -> Maybe ModLocation -> FilePath -> IO FilePath
+#if defined(wasm32_HOST_ARCH)
+runForeignJsPhase _ _ _ _ =
+  throwGhcExceptionIO (ProgramError "JavaScript file embedding is not supported on wasm32 hosts")
+#else
 runForeignJsPhase pipe_env hsc_env _location input_fn = do
   let dflags     = hsc_dflags   hsc_env
   let logger     = hsc_logger   hsc_env
@@ -368,6 +397,7 @@ runForeignJsPhase pipe_env hsc_env _location input_fn = do
   output_fn <- phaseOutputFilenameNew StopLn pipe_env hsc_env Nothing
   embedJsFile logger dflags tmpfs unit_env input_fn output_fn
   return output_fn
+#endif
 
 runCcPhase :: Phase -> PipeEnv -> HscEnv -> Maybe ModLocation -> FilePath -> IO FilePath
 runCcPhase cc_phase pipe_env hsc_env location input_fn = do
@@ -921,6 +951,7 @@ getOutputFilename logger tmpfs stop_phase output basename dflags next_phase mayb
              | otherwise      = persistent
 
 
+#if !defined(wasm32_HOST_ARCH)
 -- | LLVM Options. These are flags to be passed to opt and llc, to ensure
 -- consistency we list them in pairs, so that they form groups.
 llvmOptions :: LlvmConfig
@@ -994,6 +1025,7 @@ llvmOptions llvm_config llvm_version dflags =
                 ArchRISCV64 -> "lp64d"
                 ArchLoongArch64 -> "lp64d"
                 _           -> ""
+#endif
 
 -- | What phase to run after one of the backend code generators has run
 hscPostBackendPhase :: HscSource -> Backend -> Phase

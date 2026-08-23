@@ -1,11 +1,14 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module GHC.Cmm.Expr
-    ( CmmExpr(..), cmmExprType, cmmExprWidth, cmmExprAlignment, maybeInvertCmmExpr
-    , CmmReg(..), cmmRegType, cmmRegWidth
+    ( CmmReg(..), cmmRegType, cmmRegWidth
+#if !defined(wasm32_HOST_ARCH)
+    , CmmExpr(..), cmmExprType, cmmExprWidth, cmmExprAlignment, maybeInvertCmmExpr
     , CmmLit(..), cmmLitType
     , AlignmentSpec(..)
+#endif
       -- TODO: Remove:
     , LocalReg(..), localRegType
     , GlobalReg(..), isArgReg, globalRegSpillType
@@ -23,35 +26,37 @@ module GHC.Cmm.Expr
     , plusRegSet, minusRegSet, timesRegSet, sizeRegSet, nullRegSet
     , regSetToList
 
+#if !defined(wasm32_HOST_ARCH)
     , isTrivialCmmExpr
     , hasNoGlobalRegs
     , isLit
     , isComparisonExpr
 
     , Area(..)
+#endif
     , module GHC.Cmm.MachOp
     , module GHC.Cmm.Type
     )
 where
 
 import GHC.Prelude
-
 import GHC.Platform
-import GHC.Cmm.BlockId
-import GHC.Cmm.CLabel
 import GHC.Cmm.MachOp
 import GHC.Cmm.Type
 import GHC.Cmm.Reg
-import GHC.Utils.Panic (panic)
-import GHC.Utils.Outputable
-
-import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
+#if !defined(wasm32_HOST_ARCH)
+import GHC.Cmm.BlockId
+import GHC.Cmm.CLabel
+import GHC.Utils.Panic (panic)
+import GHC.Utils.Outputable
+import Data.Maybe
 import Numeric ( fromRat )
-
 import GHC.Types.Basic (Alignment, mkAlignment, alignmentOf)
+#endif
 
+#if !defined(wasm32_HOST_ARCH)
 -----------------------------------------------------------------------------
 --              CmmExpr
 -- An expression.  Expressions have no side effects.
@@ -318,6 +323,8 @@ isComparisonExpr (CmmMachOp op _) = isComparisonMachOp op
 isComparisonExpr _                = False
 
 
+#endif
+
 -----------------------------------------------------------------------------
 --    Register-use information for expressions and other types
 -----------------------------------------------------------------------------
@@ -401,6 +408,7 @@ instance Ord r => UserOfRegs r r where
 instance Ord r => DefinerOfRegs r r where
     foldRegsDefd _ f z r = f z r
 
+#if !defined(wasm32_HOST_ARCH)
 instance (Ord r, UserOfRegs r CmmReg) => UserOfRegs r CmmExpr where
   -- The (Ord r) in the context is necessary here
   -- See Note [Recursive superclasses] in GHC.Tc.TyCl.Instance
@@ -413,6 +421,8 @@ instance (Ord r, UserOfRegs r CmmReg) => UserOfRegs r CmmExpr where
           expr z (CmmRegOff r _)     = foldRegsUsed platform f z r
           expr z (CmmStackSlot _ _)  = z
 
+#endif
+
 instance UserOfRegs r a => UserOfRegs r [a] where
   foldRegsUsed platform f set as = foldl' (foldRegsUsed platform f) set as
   {-# INLINABLE foldRegsUsed #-}
@@ -421,6 +431,7 @@ instance DefinerOfRegs r a => DefinerOfRegs r [a] where
   foldRegsDefd platform f set as = foldl' (foldRegsDefd platform f) set as
   {-# INLINABLE foldRegsDefd #-}
 
+#if !defined(wasm32_HOST_ARCH)
 -- --------------------------------------------------------------------------
 -- Pretty-printing expressions
 -- --------------------------------------------------------------------------
@@ -586,3 +597,4 @@ ppr_offset i
 
 commafy :: [SDoc] -> SDoc
 commafy xs = fsep $ punctuate comma xs
+#endif

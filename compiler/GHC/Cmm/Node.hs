@@ -6,8 +6,9 @@
 -- CmmNode type for representation using Hoopl graphs.
 
 module GHC.Cmm.Node (
-     CmmNode(..), CmmFormal, CmmActual, CmmTickish,
-     UpdFrameOffset, Convention(..),
+     CmmFormal, CmmTickish, UpdFrameOffset, Convention(..),
+#if !defined(wasm32_HOST_ARCH)
+     CmmNode(..), CmmActual,
      ForeignConvention(..), ForeignTarget(..), foreignTargetHints,
      CmmReturnInfo(..),
      mapExp, mapExpDeep, wrapRecExp, foldExp, foldExpDeep, wrapRecExpf,
@@ -15,23 +16,23 @@ module GHC.Cmm.Node (
 
      -- * Tick scopes
      CmmTickScope(..), isTickSubScope, combineTickScopes,
+#endif
   ) where
 
 import GHC.Prelude hiding (succ)
-
+import GHC.Cmm.Expr
+import GHC.Utils.Outputable
+import GHC.Runtime.Heap.Layout
+import GHC.Types.Tickish (CmmTickish)
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Platform.Regs
 import GHC.Cmm.CLabel
-import GHC.Cmm.Expr
 import GHC.Cmm.Switch
 import GHC.Data.FastString
 import GHC.Data.Pair
 import GHC.Types.ForeignCall
-import GHC.Utils.Outputable
-import GHC.Runtime.Heap.Layout
-import GHC.Types.Tickish (CmmTickish)
 import qualified GHC.Types.Unique as U
 import GHC.Types.Basic (FunctionOrData(..))
-
 import GHC.Platform
 import GHC.Cmm.Dataflow.Block
 import GHC.Cmm.Dataflow.Graph
@@ -42,8 +43,9 @@ import Data.Maybe
 import Data.List (tails,sortBy)
 import GHC.Types.Unique (nonDetCmpUnique)
 import GHC.Utils.Constants (debugIsOn)
+#endif
 
-
+#if !defined(wasm32_HOST_ARCH)
 ------------------------
 -- CmmNode
 
@@ -420,6 +422,8 @@ instance NonLocal CmmNode where
 -- Various helper types
 
 type CmmActual = CmmExpr
+#endif
+
 type CmmFormal = LocalReg
 
 type UpdFrameOffset = ByteOff
@@ -451,6 +455,7 @@ data Convention
        -- (TODO: I don't think we need this --SDM)
   deriving( Eq )
 
+#if !defined(wasm32_HOST_ARCH)
 data ForeignConvention
   = ForeignConvention
         CCallConv               -- Which foreign-call convention
@@ -504,6 +509,8 @@ pprForeignTarget platform (PrimTarget op)
                           (mkFastString (show op))
                           ForeignLabelInThisPackage IsFunction)
 
+#endif
+
 instance Outputable Convention where
   ppr = pprConvention
 
@@ -515,6 +522,7 @@ pprConvention  Slow                 = text "<slow-convention>"
 pprConvention  GC                   = text "<gc-convention>"
 
 
+#if !defined(wasm32_HOST_ARCH)
 foreignTargetHints :: ForeignTarget -> ([ForeignHint], [ForeignHint])
 foreignTargetHints target
   = ( res_hints ++ repeat NoHint
@@ -935,3 +943,4 @@ combineTickScopes s1 s2
   | s1 `isTickSubScope` s2 = s1
   | s2 `isTickSubScope` s1 = s2
   | otherwise              = CombinedScope s1 s2
+#endif

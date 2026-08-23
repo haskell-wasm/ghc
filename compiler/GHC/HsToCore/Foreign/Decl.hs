@@ -1,4 +1,5 @@
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -19,7 +20,9 @@ import GHC.Data.FastString
 import GHC.Tc.Utils.Monad        -- temp
 
 import GHC.HsToCore.Foreign.C
+#if !defined(wasm32_HOST_ARCH)
 import GHC.HsToCore.Foreign.JavaScript
+#endif
 import GHC.HsToCore.Foreign.Wasm
 import GHC.HsToCore.Foreign.Utils
 import GHC.HsToCore.Monad
@@ -34,6 +37,9 @@ import GHC.Cmm.CLabel
 import GHC.Types.ForeignCall
 import GHC.Types.SrcLoc
 import GHC.Utils.Outputable
+#if defined(wasm32_HOST_ARCH)
+import GHC.Utils.Panic
+#endif
 import GHC.Driver.DynFlags
 import GHC.Platform
 import GHC.Data.OrdList
@@ -133,9 +139,13 @@ dsFImport id co (CImport _ cconv safety mHeader spec) = do
   let cconv' = unLoc cconv
       safety' = unLoc safety
   case (platformArch platform, cconv') of
+#if defined(wasm32_HOST_ARCH)
+    (ArchJavaScript, _) -> unsupportedJavaScriptBackend
+#else
     (ArchJavaScript, _) -> do
       (bs, h, c) <- dsJsImport id co spec cconv' safety' mHeader
       pure (bs, h, c, [])
+#endif
     (ArchWasm32, JavaScriptCallConv) ->
       dsWasmJSImport id co spec safety'
     _ -> do
@@ -179,15 +189,24 @@ dsFExport :: Id                 -- Either the exported Id,
 dsFExport fn_id co ext_name cconv is_dyn = do
   platform <- getPlatform
   case (platformArch platform, cconv) of
+#if defined(wasm32_HOST_ARCH)
+    (ArchJavaScript, _) -> unsupportedJavaScriptBackend
+#else
     (ArchJavaScript, _) -> do
       (h, c, ts) <- dsJsFExport fn_id co ext_name cconv is_dyn
       pure (h, c, ts, [fn_id], [])
+#endif
     (ArchWasm32, JavaScriptCallConv) ->
       dsWasmJSExport fn_id co ext_name
     _ -> do
       (h, c, ts) <- dsCFExport fn_id co ext_name cconv is_dyn
       pure (h, c, ts, [fn_id], [])
 
+#if defined(wasm32_HOST_ARCH)
+unsupportedJavaScriptBackend :: a
+unsupportedJavaScriptBackend =
+  throwGhcException (ProgramError "JavaScript code generation is not supported on wasm32 hosts")
+#endif
 
 foreignExportsInitialiser :: Platform -> Module -> [Id] -> CStub
 foreignExportsInitialiser _        _   []     = mempty

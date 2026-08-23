@@ -4,18 +4,22 @@
 \section{Code output phase}
 -}
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module GHC.Driver.CodeOutput
-   ( codeOutput
-   , outputForeignStubs
+   ( outputForeignStubs
+#if !defined(wasm32_HOST_ARCH)
+   , codeOutput
    , profilingInitCode
    , ipInitCode
+#endif
    )
 where
 
 import GHC.Prelude
 import GHC.Platform
+#if !defined(wasm32_HOST_ARCH)
 import GHC.ForeignSrcLang
 import GHC.Data.FastString
 
@@ -28,42 +32,57 @@ import GHC.Cmm
 import GHC.Cmm.CLabel
 
 import GHC.StgToCmm.CgUtils (CgStream)
+#endif
 
 import GHC.Driver.DynFlags
 import GHC.Driver.Config.Finder    ( initFinderOpts   )
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Driver.Config.CmmToAsm  ( initNCGConfig    )
 import GHC.Driver.Config.CmmToLlvm ( initLlvmCgConfig )
 import GHC.Driver.LlvmConfigCache  (LlvmConfigCache)
+#endif
 import GHC.Driver.Ppr
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Driver.Backend
+#endif
 
 import GHC.Data.OsPath qualified as OsPath
 import qualified GHC.Data.ShortText as ST
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Data.Stream           ( liftIO )
 import qualified GHC.Data.Stream as Stream
+#endif
 
 import GHC.Utils.TmpFs
 
-
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Utils.Error
+#endif
 import GHC.Utils.Outputable
 import GHC.Utils.Logger
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Utils.Exception ( bracket )
 import GHC.Utils.Ppr (Mode(..))
 import GHC.Utils.Panic.Plain ( pgmError )
+#endif
 
 import GHC.Unit
 import GHC.Unit.Finder      ( mkStubPaths )
 
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.SrcLoc
 import GHC.Types.CostCentre
+#endif
 import GHC.Types.ForeignStubs
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.Unique.DSM
 
 import System.IO
 import Data.Set (Set)
 import qualified Data.Set as Set
+#endif
 
+#if !defined(wasm32_HOST_ARCH)
 {-
 ************************************************************************
 *                                                                      *
@@ -248,6 +267,7 @@ outputJS :: Logger -> LlvmConfigCache -> DynFlags -> FilePath -> CgStream RawCmm
 outputJS _ _ _ _ _ = pgmError $ "codeOutput: Hit JavaScript case. We should never reach here!"
                               ++ "\nThe JS backend should shortcircuit to StgToJS after Stg."
                               ++ "\nIf you reached this point then you've somehow made it to Cmm!"
+#endif
 
 {-
 ************************************************************************
@@ -360,6 +380,7 @@ outputForeignStubs_help fname doc_str header footer
    = do writeFile fname (header ++ doc_str ++ '\n':footer ++ "\n")
         return True
 
+#if !defined(wasm32_HOST_ARCH)
 -- -----------------------------------------------------------------------------
 -- Initialising cost centres
 
@@ -424,3 +445,4 @@ ipInitCode do_info_table platform this_mod
 
    ipe_buffer_decl =
        text "extern IpeBufferListNode" <+> ipe_buffer_label <> text ";"
+#endif

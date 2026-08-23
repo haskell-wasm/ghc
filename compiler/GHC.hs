@@ -351,7 +351,9 @@ import GHC.Driver.Backend
 import GHC.Driver.Config.Finder (initFinderOpts)
 import GHC.Driver.Config.Parser (initParserOpts)
 import GHC.Driver.Config.Logger (initLogFlags)
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Driver.Config.StgToJS (initStgToJSConfig)
+#endif
 import GHC.Driver.Config.Diagnostic
 import GHC.Driver.Main
 import GHC.Driver.Make
@@ -440,7 +442,9 @@ import GHC.Unit.Module.ModSummary
 import GHC.Unit.Module.Graph
 import GHC.Unit.Home.ModInfo
 import qualified GHC.Unit.Home.Graph as HUG
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Settings
+#endif
 
 import Control.Applicative ((<|>))
 import Control.Concurrent
@@ -750,6 +754,7 @@ setTopSessionDynFlags dflags = do
         pure $ Just $ Interp (ExternalInterp $ ExtWasm $ ExtInterpState cfg s) loader lookup_cache fs_cache
 #endif
 
+#if !defined(wasm32_HOST_ARCH)
     -- JavaScript interpreter
     | ArchJavaScript <- platformArch (targetPlatform dflags)
     -> do
@@ -767,6 +772,7 @@ setTopSessionDynFlags dflags = do
               , jsInterpFinderCache = hsc_FC hsc_env
               }
          return (Just (Interp (ExternalInterp (ExtJS (ExtInterpState cfg s))) loader lookup_cache fs_cache))
+#endif
 
     -- external interpreter
     | gopt Opt_ExternalInterpreter dflags

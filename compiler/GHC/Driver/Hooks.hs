@@ -3,7 +3,7 @@
 -- NB: this module is SOURCE-imported by DynFlags, and should primarily
 --     refer to *types*, rather than *code*
 
-{-# LANGUAGE RankNTypes, TypeFamilies #-}
+{-# LANGUAGE CPP, RankNTypes, TypeFamilies #-}
 
 module GHC.Driver.Hooks
    ( Hooks
@@ -24,8 +24,10 @@ module GHC.Driver.Hooks
    , runRnSpliceHook
    , getValueSafelyHook
    , createIservProcessHook
+#if !defined(wasm32_HOST_ARCH)
    , stgToCmmHook
    , cmmToRawCmmHook
+#endif
    )
 where
 
@@ -45,25 +47,33 @@ import GHC.Types.Name
 import GHC.Types.Id
 import GHC.Types.SrcLoc
 import GHC.Types.Basic
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.CostCentre
 import GHC.Types.IPE
+#endif
 import GHC.Types.Meta
 
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Unit.Module
+#endif
 import GHC.Unit.Module.ModSummary
 import GHC.Unit.Module.ModIface
 import GHC.Unit.Home.PackageTable
 
 import GHC.Core
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Core.TyCon
+#endif
 import GHC.Core.Type
 
 import GHC.Tc.Types
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Stg.Syntax
 import GHC.StgToCmm.CgUtils (CgStream)
 import GHC.StgToCmm.Types (ModuleLFInfos)
 import GHC.StgToCmm.Config
 import GHC.Cmm
+#endif
 
 import GHCi.RemoteTypes
 
@@ -99,8 +109,10 @@ emptyHooks = Hooks
   , runRnSpliceHook        = Nothing
   , getValueSafelyHook     = Nothing
   , createIservProcessHook = Nothing
+#if !defined(wasm32_HOST_ARCH)
   , stgToCmmHook           = Nothing
   , cmmToRawCmmHook        = Nothing
+#endif
   }
 
 {- Note [The Decoupling Abstract Data Hack]
@@ -147,10 +159,12 @@ data Hooks = Hooks
   , getValueSafelyHook     :: !(Maybe (HscEnv -> Name -> Type
                                          -> IO (Either Type (HValue, [Linkable], PkgsLoaded))))
   , createIservProcessHook :: !(Maybe (CreateProcess -> IO ProcessHandle))
+#if !defined(wasm32_HOST_ARCH)
   , stgToCmmHook           :: !(Maybe (StgToCmmConfig -> InfoTableProvMap -> [TyCon] -> CollectedCCs
                                  -> [CgStgTopBinding] -> CgStream CmmGroup ModuleLFInfos))
   , cmmToRawCmmHook        :: !(forall a . Maybe (DynFlags -> Maybe Module -> CgStream CmmGroupSRTs a
                                  -> IO (CgStream RawCmmGroup a)))
+#endif
   }
 
 class HasHooks m where

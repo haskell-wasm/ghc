@@ -51,7 +51,9 @@ module GHC.Runtime.Interpreter
   , withExtInterp
   , withExtInterpStatus
   , withIServ
+#if !defined(wasm32_HOST_ARCH)
   , withJSInterp
+#endif
   , stopInterp
   , purgeLookupSymbolCache
   , freeReallyRemoteRef
@@ -68,7 +70,9 @@ module GHC.Runtime.Interpreter
 import GHC.Prelude
 
 import GHC.Runtime.Interpreter.Types
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Runtime.Interpreter.JS
+#endif
 import GHC.Runtime.Interpreter.Wasm
 import GHC.Runtime.Interpreter.Process
 import GHC.Runtime.Utils
@@ -202,13 +206,17 @@ interpCmd interp msg = case interpInstance interp of
 
 withExtInterp :: ExceptionMonad m => ExtInterp -> (forall d. ExtInterpInstance d -> m a) -> m a
 withExtInterp ext action = case ext of
+#if !defined(wasm32_HOST_ARCH)
   ExtJS    i -> withJSInterp i action
+#endif
   ExtWasm  i -> withWasmInterp i action
   ExtIServ i -> withIServ    i action
 
 withExtInterpStatus :: ExtInterp -> (forall d. ExtInterpStatusVar d -> m a) -> m a
 withExtInterpStatus ext action = case ext of
+#if !defined(wasm32_HOST_ARCH)
   ExtJS    i -> action (interpStatus i)
+#endif
   ExtWasm  i -> action $ interpStatus i
   ExtIServ i -> action (interpStatus i)
 
@@ -230,6 +238,7 @@ withIServ (ExtInterpState cfg mstate) action = do
   inst <- spawnInterpMaybe cfg spawnIServ mstate
   action inst
 
+#if !defined(wasm32_HOST_ARCH)
 -- | Spawn JS interpreter if it isn't already running and execute the given action
 --
 -- Update the interpreter state.
@@ -237,6 +246,7 @@ withJSInterp :: ExceptionMonad m => JSInterp -> (ExtInterpInstance JSInterpExtra
 withJSInterp (ExtInterpState cfg mstate) action = do
   inst <- spawnInterpMaybe cfg spawnJSInterp mstate
   action inst
+#endif
 
 withWasmInterp :: ExceptionMonad m => WasmInterp -> (ExtInterpInstance () -> m a) -> m a
 withWasmInterp (ExtInterpState cfg mstate) action = do
@@ -479,7 +489,9 @@ lookupSymbol interp str = withSymbolCache interp str $
       ExtIServ i -> withIServ i $ \inst -> fmap fromRemotePtr <$> do
         uninterruptibleMask_ $
           sendMessage inst (LookupSymbol (fastStringToShortByteString (interpSymbolToCLabel str)))
+#if !defined(wasm32_HOST_ARCH)
       ExtJS {} -> pprPanic "lookupSymbol not supported by the JS interpreter" (ppr str)
+#endif
       ExtWasm i -> withWasmInterp i $ \inst -> fmap fromRemotePtr <$> do
         uninterruptibleMask_ $
           sendMessage inst (LookupSymbol (fastStringToShortByteString (interpSymbolToCLabel str)))
@@ -494,7 +506,9 @@ lookupSymbolInDLL interp dll str = withSymbolCache interp str $
       ExtIServ i -> withIServ i $ \inst -> fmap fromRemotePtr <$> do
         uninterruptibleMask_ $
           sendMessage inst (LookupSymbolInDLL dll (fastStringToShortByteString (interpSymbolToCLabel str)))
+#if !defined(wasm32_HOST_ARCH)
       ExtJS {} -> pprPanic "lookupSymbol not supported by the JS interpreter" (ppr str)
+#endif
       -- wasm dyld doesn't track which symbol comes from which .so
       ExtWasm {} -> lookupSymbol interp str
 

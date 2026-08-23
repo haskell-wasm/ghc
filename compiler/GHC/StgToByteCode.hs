@@ -57,7 +57,6 @@ import GHC.Builtin.Uniques
 import GHC.Data.FastString
 import GHC.Utils.Panic
 import GHC.Utils.Exception (evaluate)
-import GHC.CmmToAsm.Config (platformWordWidth)
 import GHC.StgToCmm.Closure ( NonVoid(..), fromNonVoid, idPrimRepU,
                               addIdReps, addArgReps,
                               assertNonVoidIds, assertNonVoidStgArgs )
@@ -953,8 +952,8 @@ doPrimOp platform op init_d s p args =
     Int16NegOp -> sizedPrimOp OP_NEG
     Int8NegOp -> sizedPrimOp OP_NEG
 
-    IntToWordOp     -> mk_conv (platformWordWidth platform)
-    WordToIntOp     -> mk_conv (platformWordWidth platform)
+    IntToWordOp     -> mk_conv (wordWidth platform)
+    WordToIntOp     -> mk_conv (wordWidth platform)
     Int8ToWord8Op   -> mk_conv W8
     Word8ToInt8Op   -> mk_conv W8
     Int16ToWord16Op -> mk_conv W16
@@ -963,10 +962,10 @@ doPrimOp platform op init_d s p args =
     Word32ToInt32Op -> mk_conv W32
     Int64ToWord64Op -> only64bit $ mk_conv W64
     Word64ToInt64Op -> only64bit $ mk_conv W64
-    IntToAddrOp     -> mk_conv (platformWordWidth platform)
-    AddrToIntOp     -> mk_conv (platformWordWidth platform)
-    ChrOp           -> mk_conv (platformWordWidth platform)   -- Int# and Char# are rep'd the same
-    OrdOp           -> mk_conv (platformWordWidth platform)
+    IntToAddrOp     -> mk_conv (wordWidth platform)
+    AddrToIntOp     -> mk_conv (wordWidth platform)
+    ChrOp           -> mk_conv (wordWidth platform)   -- Int# and Char# are rep'd the same
+    OrdOp           -> mk_conv (wordWidth platform)
 
     -- Memory primops, expand the ghci-mem-primops test if you add more.
     IndexOffAddrOp_Word8 ->  primOpWithRep (OP_INDEX_ADDR W8) W8
@@ -976,14 +975,14 @@ doPrimOp platform op init_d s p args =
 
     _ -> Nothing
   where
-    only64bit = if platformWordWidth platform == W64 then id else const Nothing
+    only64bit = if wordWidth platform == W64 then id else const Nothing
     primArg1Width :: StgArg -> Width
     primArg1Width arg
       | rep <- (stgArgRepU arg)
       = case rep of
-        AddrRep -> platformWordWidth platform
-        IntRep -> platformWordWidth platform
-        WordRep -> platformWordWidth platform
+        AddrRep -> wordWidth platform
+        IntRep -> wordWidth platform
+        WordRep -> wordWidth platform
 
         Int64Rep -> W64
         Word64Rep -> W64
@@ -1011,7 +1010,7 @@ doPrimOp platform op init_d s p args =
       | W64 <- width = RETURN L -- L works for 64 bit on any platform
       | otherwise = RETURN N -- <64bit width, fits in word on all platforms
 
-    mkSlideWords width = if platformWordWidth platform < width then 2 else 1
+    mkSlideWords width = if wordWidth platform < width then 2 else 1
 
     -- Push args, execute primop, slide, return_N
     -- Decides width of operation based on first argument.

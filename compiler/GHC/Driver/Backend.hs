@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiWayIf, LambdaCase #-}
+{-# LANGUAGE CPP, MultiWayIf, LambdaCase #-}
 
 {-|
 Module      : GHC.Driver.Backend
@@ -201,6 +201,9 @@ platformDefaultBackend platform = if
 
 -- | Is the platform supported by the Native Code Generator?
 platformNcgSupported :: Platform -> Bool
+#if defined(wasm32_HOST_ARCH)
+platformNcgSupported _ = False
+#else
 platformNcgSupported platform = if
       | platformUnregisterised platform -> False -- NCG doesn't support unregisterised ABI
       | ncgValidArch                    -> True
@@ -216,6 +219,7 @@ platformNcgSupported platform = if
          ArchRISCV64   -> True
          ArchLoongArch64 -> True
          _             -> False
+#endif
 
 -- | Is the platform supported by the JS backend?
 platformJSSupported :: Platform -> Bool
