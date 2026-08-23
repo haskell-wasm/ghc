@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -----------------------------------------------------------------------------
 --
 -- Object-file symbols (called CLabel for historical reasons).
@@ -98,7 +100,9 @@ module GHC.Cmm.CLabel (
         -- * Predicates
         hasCAF,
         needsCDecl,
+#if !defined(wasm32_HOST_ARCH)
         maybeLocalBlockLabel,
+#endif
         externallyVisibleCLabel,
         isLibcFun,
         isCFunctionLabel,
@@ -144,7 +148,9 @@ import GHC.Prelude
 
 import GHC.Types.Id.Info
 import GHC.Types.Basic
+#if !defined(wasm32_HOST_ARCH)
 import {-# SOURCE #-} GHC.Cmm.BlockId (BlockId, mkBlockId)
+#endif
 import GHC.Unit.Types
 import GHC.Types.Name
 import GHC.Types.Unique
@@ -1045,11 +1051,13 @@ modLabelNeedsCDecl MLK_IPEBuffer        = True
 modLabelNeedsCDecl MLK_InitializerArray = False
 modLabelNeedsCDecl MLK_FinalizerArray   = False
 
+#if !defined(wasm32_HOST_ARCH)
 -- | If a label is a local block label then return just its 'BlockId', otherwise
 -- 'Nothing'.
 maybeLocalBlockLabel :: CLabel -> Maybe BlockId
 maybeLocalBlockLabel (LocalBlockLabel uq)  = Just $ mkBlockId uq
 maybeLocalBlockLabel _                     = Nothing
+#endif
 
 
 -- | Check whether a label corresponds to a C function that has

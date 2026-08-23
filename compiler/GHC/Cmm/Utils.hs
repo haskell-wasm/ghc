@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -----------------------------------------------------------------------------
 --
 -- Cmm utilities.
@@ -11,6 +13,7 @@ module GHC.Cmm.Utils(
         primRepCmmType, slotCmmType,
         typeCmmType, typeForeignHint, primRepForeignHint,
 
+#if !defined(wasm32_HOST_ARCH)
         -- CmmLit
         zeroCLit, mkIntCLit,
         mkWordCLit,
@@ -59,30 +62,30 @@ module GHC.Cmm.Utils(
 
         -- * Ticks
         blockTicks
+#endif
   ) where
 
 import GHC.Prelude
-
 import GHC.Core.TyCon     ( PrimRep(..), PrimElemRep(..) )
 import GHC.Types.RepType  ( NvUnaryType, SlotTy (..), typePrimRepU )
-
 import GHC.Platform
+import GHC.Cmm
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Platform.Tag (tAG_MASK)
 import GHC.Runtime.Heap.Layout
-import GHC.Cmm
 import GHC.Cmm.BlockId
 import GHC.Cmm.CLabel
 import GHC.Utils.Outputable
 import GHC.Utils.Panic
 import GHC.Types.Unique
 import GHC.Platform.Regs
-
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Foldable (toList)
 import GHC.Cmm.Dataflow.Graph
 import GHC.Cmm.Dataflow.Label
 import GHC.Cmm.Dataflow.Block
+#endif
 
 ---------------------------------------------------
 --
@@ -156,6 +159,7 @@ primRepForeignHint (VecRep {})  = NoHint
 typeForeignHint :: NvUnaryType -> ForeignHint
 typeForeignHint = primRepForeignHint . typePrimRepU
 
+#if !defined(wasm32_HOST_ARCH)
 ---------------------------------------------------
 --
 --      CmmLit
@@ -576,3 +580,4 @@ currentNurseryExpr p = CmmReg $ currentNurseryReg p
 cccsExpr           p = CmmReg $ cccsReg           p
 myCapabilityExpr   p =
   cmmRegOff (baseReg p) $ negate $ pc_OFFSET_Capability_r $ platformConstants p
+#endif

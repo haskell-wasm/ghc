@@ -1,28 +1,36 @@
+{-# LANGUAGE CPP #-}
+
 module GHC.Cmm.Reg
-    ( -- * Cmm Registers
-      CmmReg(..)
+    ( GlobalReg(..), pprGlobalReg, node
+#if !defined(wasm32_HOST_ARCH)
+      -- * Cmm Registers
+    , CmmReg(..)
     , cmmRegType
     , cmmRegWidth
       -- * Local registers
     , LocalReg(..)
     , localRegType
       -- * Global registers
-    , GlobalReg(..), isArgReg, globalRegSpillType, pprGlobalReg
+    , isArgReg, globalRegSpillType
     , spReg, hpReg, spLimReg, hpLimReg, nodeReg
     , currentTSOReg, currentNurseryReg, hpAllocReg, cccsReg
-    , node, baseReg
+    , baseReg
     , GlobalRegUse(..), pprGlobalRegUse
+#endif
 
     , GlobalArgRegs(..)
     ) where
 
 import GHC.Prelude
 
-import GHC.Platform
 import GHC.Utils.Outputable
+#if !defined(wasm32_HOST_ARCH)
+import GHC.Platform
 import GHC.Types.Unique
 import GHC.Cmm.Type
+#endif
 
+#if !defined(wasm32_HOST_ARCH)
 -----------------------------------------------------------------------------
 --              Cmm registers
 -----------------------------------------------------------------------------
@@ -152,6 +160,8 @@ pprLocalReg (LocalReg uniq rep) =
          --if isGcPtrType rep
          --      then doubleQuotes (text "ptr")
          --      else empty
+
+#endif
 
 -----------------------------------------------------------------------------
 --              Global STG registers
@@ -293,6 +303,7 @@ pprGlobalReg gr
 {-# SPECIALIZE pprGlobalReg :: GlobalReg -> HLine #-} -- see Note [SPECIALIZE to HDoc] in GHC.Utils.Outputable
 
 
+#if !defined(wasm32_HOST_ARCH)
 -- convenient aliases
 baseReg, spReg, hpReg, spLimReg, hpLimReg, nodeReg,
   currentTSOReg, currentNurseryReg, hpAllocReg, cccsReg :: Platform -> CmmReg
@@ -306,10 +317,12 @@ currentTSOReg     p = CmmGlobal (GlobalRegUse CurrentTSO     $ bWord p)
 currentNurseryReg p = CmmGlobal (GlobalRegUse CurrentNursery $ bWord p)
 hpAllocReg        p = CmmGlobal (GlobalRegUse HpAlloc        $ bWord p)
 cccsReg           p = CmmGlobal (GlobalRegUse CCCS           $ bWord p)
+#endif
 
 node :: GlobalReg
 node = VanillaReg 1
 
+#if !defined(wasm32_HOST_ARCH)
 globalRegSpillType :: Platform -> GlobalReg -> CmmType
 globalRegSpillType platform = \case
    VanillaReg _ -> gcWord platform
@@ -337,6 +350,7 @@ isArgReg (XmmReg {})     = True
 isArgReg (YmmReg {})     = True
 isArgReg (ZmmReg {})     = True
 isArgReg _               = False
+#endif
 
 -- --------------------------------------------------------------------------
 

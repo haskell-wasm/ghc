@@ -1,16 +1,28 @@
+{-# LANGUAGE CPP #-}
+
 -- | LLVM config cache
 module GHC.Driver.LlvmConfigCache
   ( LlvmConfigCache
   , initLlvmConfigCache
+#if !defined(wasm32_HOST_ARCH)
   , readLlvmConfigCache
+#endif
   )
 where
 
 import GHC.Prelude
+#if !defined(wasm32_HOST_ARCH)
 import GHC.CmmToLlvm.Config
 
 import System.IO.Unsafe
+#endif
 
+#if defined(wasm32_HOST_ARCH)
+data LlvmConfigCache = LlvmConfigCache
+
+initLlvmConfigCache :: FilePath -> IO LlvmConfigCache
+initLlvmConfigCache _ = pure LlvmConfigCache
+#else
 -- | Cache LLVM configuration read from files in top_dir
 --
 -- See Note [LLVM configuration] in GHC.CmmToLlvm.Config
@@ -26,3 +38,4 @@ initLlvmConfigCache top_dir = pure $ LlvmConfigCache (unsafePerformIO $ initLlvm
 
 readLlvmConfigCache :: LlvmConfigCache -> IO LlvmConfig
 readLlvmConfigCache (LlvmConfigCache !config) = pure config
+#endif

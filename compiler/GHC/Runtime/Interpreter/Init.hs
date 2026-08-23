@@ -23,7 +23,9 @@ import GHC.Linker.Executable
 import qualified GHC.Linker.Loader as Loader
 import GHC.Runtime.Interpreter
 import GHC.Runtime.Interpreter.C
+#if !defined(wasm32_HOST_ARCH)
 import GHC.StgToJS.Types (StgToJSConfig)
+#endif
 
 import GHC.Utils.Monad
 import GHC.Utils.Outputable
@@ -43,7 +45,9 @@ data InterpOpts = InterpOpts
   , interpJsInterp :: FilePath
   , interpTmpDir :: TempDir
   , interpFinderOpts :: FinderOpts
+#if !defined(wasm32_HOST_ARCH)
   , interpJsCodegenCfg :: StgToJSConfig
+#endif
   , interpVerbosity :: Int
   , interpCreateProcess :: Maybe (CreateProcess -> IO ProcessHandle) -- create iserv process hook
   , interpWasmDyld :: FilePath
@@ -68,7 +72,7 @@ initInterpreter
   -> UnitEnv
   -> InterpOpts
   -> IO (Maybe Interp)
-initInterpreter dflags tmpfs logger platform finder_cache unit_env opts = do
+initInterpreter dflags tmpfs logger _platform _finder_cache unit_env opts = do
 
   lookup_cache  <- liftIO $ mkInterpSymbolCache
 
@@ -78,7 +82,7 @@ initInterpreter dflags tmpfs logger platform finder_cache unit_env opts = do
   if
 #if !defined(wasm32_HOST_ARCH)
     -- Wasm dynamic linker
-    | ArchWasm32 <- platformArch platform
+    | ArchWasm32 <- platformArch _platform
     -> do
         s <- liftIO $ newMVar InterpPending
         loader <- liftIO Loader.uninitializedLoader
@@ -98,16 +102,14 @@ initInterpreter dflags tmpfs logger platform finder_cache unit_env opts = do
                 , wasmInterpBrowserPuppeteerLaunchOpts = interpBrowserPuppeteerLaunchOpts opts
                 , wasmInterpBrowserPlaywrightBrowserType = interpBrowserPlaywrightBrowserType opts
                 , wasmInterpBrowserPlaywrightLaunchOpts = interpBrowserPlaywrightLaunchOpts opts
-                , wasmInterpTargetPlatform = platform
+                , wasmInterpTargetPlatform = _platform
                 , wasmInterpProfiled = profiled
                 , wasmInterpHsSoSuffix = way_tag ++ dynLibSuffix (interpNameVer opts)
                 , wasmInterpUnitState = ue_homeUnitState unit_env
                 }
         pure $ Just $ Interp (ExternalInterp $ ExtWasm $ ExtInterpState cfg s) loader lookup_cache fs_cache
-#endif
-
     -- JavaScript interpreter
-    | ArchJavaScript <- platformArch platform
+    | ArchJavaScript <- platformArch _platform
     -> do
          s <- liftIO $ newMVar InterpPending
          loader <- liftIO Loader.uninitializedLoader
@@ -120,9 +122,10 @@ initInterpreter dflags tmpfs logger platform finder_cache unit_env opts = do
               , jsInterpCodegenCfg  = interpJsCodegenCfg opts
               , jsInterpUnitEnv     = unit_env
               , jsInterpFinderOpts  = interpFinderOpts opts
-              , jsInterpFinderCache = finder_cache
+              , jsInterpFinderCache = _finder_cache
               }
          return (Just (Interp (ExternalInterp (ExtJS (ExtInterpState cfg s))) loader lookup_cache fs_cache))
+#endif
 
     -- external interpreter
     | interpExternal opts

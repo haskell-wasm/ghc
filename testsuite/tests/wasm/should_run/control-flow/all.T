@@ -42,7 +42,7 @@ basenames = ['Church.hs',
 sources = ['src/' + basename for basename in basenames]
 
 test('WasmControlFlow',
-     [extra_run_opts(" ".join(['"' + config.libdir + '"', '-r'] + sources)), ctlextra_files, req_cmm, ignore_stdout],
+     [when(arch('wasm32'), skip), extra_run_opts(" ".join(['"' + config.libdir + '"', '-r'] + sources)), ctlextra_files, req_cmm, ignore_stdout],
      multimod_compile_and_run,
      ['WasmControlFlow', '-package ghc'])
 

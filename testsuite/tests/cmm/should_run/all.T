@@ -1,5 +1,5 @@
 test('HooplPostorder',
-     extra_run_opts('"' + config.libdir + '"'),
+     [when(arch('wasm32'), skip), extra_run_opts('"' + config.libdir + '"')],
      compile_and_run,
      ['-package ghc'])
 

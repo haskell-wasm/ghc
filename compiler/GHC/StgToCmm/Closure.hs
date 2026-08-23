@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 
 -----------------------------------------------------------------------------
@@ -22,15 +23,18 @@ module GHC.StgToCmm.Closure (
         -- * LambdaFormInfo
         LambdaFormInfo,         -- Abstract
         StandardFormInfo,        -- ...ditto...
+        importedIdLFInfo, mkLFArgument,
+#if !defined(wasm32_HOST_ARCH)
         mkLFThunk, mkLFReEntrant, mkConLFInfo, mkSelectorLFInfo,
-        mkApLFInfo, importedIdLFInfo, mkLFArgument, mkLFLetNoEscape,
+        mkApLFInfo, mkLFLetNoEscape,
         mkLFStringLit,
         lfDynTag,
         isLFThunk, isLFReEntrant, lfUpdatable,
+        tagForArity,
 
         -- * Used by other modules
         CgLoc(..), CallMethod(..),
-        nodeMustPointToIt, isKnownFun, funTag, tagForArity,
+        nodeMustPointToIt, isKnownFun, funTag,
         getCallMethod,
 
         -- * ClosureInfo
@@ -61,29 +65,40 @@ module GHC.StgToCmm.Closure (
         indStaticInfoTable,
         staticClosureNeedsLink,
         mkClosureInfoTableLabel
+#endif
     ) where
 
 import GHC.Prelude
 import GHC.Platform
 import GHC.Platform.Tag (DynTag, mAX_PTR_TAG, isSmallFamily)
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Platform.Profile
+#endif
 
 import GHC.Stg.Syntax
 import GHC.Runtime.Heap.Layout
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Cmm
-import GHC.StgToCmm.Types
 import GHC.StgToCmm.Sequel
 
 import GHC.Types.CostCentre
 import GHC.Cmm.BlockId
 import GHC.Cmm.CLabel
+#endif
+import GHC.StgToCmm.Types
 import GHC.Types.Id
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.Id.Info
+#endif
 import GHC.Core.DataCon
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.Name
+#endif
 import GHC.Core.Type
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Core.TyCo.Rep
 import GHC.Tc.Utils.TcType
+#endif
 import GHC.Core.TyCon
 import GHC.Types.RepType
 import GHC.Types.Basic
@@ -92,6 +107,7 @@ import GHC.Utils.Panic
 import GHC.Data.Maybe (isNothing)
 
 import Data.Coerce (coerce)
+#if !defined(wasm32_HOST_ARCH)
 import qualified Data.ByteString.Char8 as BS8
 import GHC.StgToCmm.Config
 import GHC.Stg.EnforceEpt.TagSig (isTaggedSig)
@@ -127,6 +143,7 @@ isKnownFun :: LambdaFormInfo -> Bool
 isKnownFun LFReEntrant{} = True
 isKnownFun LFLetNoEscape = True
 isKnownFun _             = False
+#endif
 
 
 -------------------------------------
@@ -206,6 +223,7 @@ mkLFArgument id
     ty = idType id
 
 -------------
+#if !defined(wasm32_HOST_ARCH)
 mkLFLetNoEscape :: LambdaFormInfo
 mkLFLetNoEscape = LFLetNoEscape
 
@@ -245,6 +263,7 @@ mkApLFInfo :: Id -> UpdateFlag -> Arity -> LambdaFormInfo
 mkApLFInfo id upd_flag arity
   = LFThunk NotTopLevel (arity == 0) (isUpdatable upd_flag) (ApThunk arity)
         (mightBeFunTy (idType id))
+#endif
 
 -------------
 -- | The 'LambdaFormInfo' of an imported Id.
@@ -312,8 +331,10 @@ correct by construction (the invariant being that if it exists, it is correct):
 -}
 
 -------------
+#if !defined(wasm32_HOST_ARCH)
 mkLFStringLit :: LambdaFormInfo
 mkLFStringLit = LFUnlifted
+#endif
 
 -----------------------------------------------------
 --                Dynamic pointer tagging
@@ -323,6 +344,7 @@ tagForCon :: Platform -> DataCon -> DynTag
 tagForCon platform con = min (dataConTag con) (mAX_PTR_TAG platform)
 -- NB: 1-indexed
 
+#if !defined(wasm32_HOST_ARCH)
 tagForArity :: Platform -> RepArity -> DynTag
 tagForArity platform arity
  | isSmallFamily platform arity = arity
@@ -978,3 +1000,5 @@ staticClosureNeedsLink :: Bool -> CmmInfoTable -> Bool
 staticClosureNeedsLink has_srt CmmInfoTable{ cit_rep = smrep }
   | isConRep smrep         = not (isStaticNoCafCon smrep)
   | otherwise              = has_srt
+
+#endif

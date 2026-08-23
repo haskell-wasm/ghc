@@ -1,6 +1,8 @@
+{-# LANGUAGE CPP #-}
 -- Cmm representations using Hoopl's Graph CmmNode e x.
 
 module GHC.Cmm (
+#if !defined(wasm32_HOST_ARCH)
      -- * Cmm top-level datatypes
      DCmmGroup,
      CmmProgram, CmmGroup, CmmGroupSRTs, RawCmmGroup, GenCmmGroup,
@@ -24,37 +26,41 @@ module GHC.Cmm (
      , DCmmTopInfo
      , CmmTopInfo
      , CmmStackInfo(..), CmmInfoTable(..), topInfoTable, topInfoTableD,
-     ClosureTypeInfo(..),
-     ProfilingInfo(..), ConstrDescription,
+     ProfilingInfo(..),
+#endif
+     ClosureTypeInfo(..), ConstrDescription,
 
      -- * Statements, expressions and types
      module GHC.Cmm.Node,
      module GHC.Cmm.Expr,
 
+#if !defined(wasm32_HOST_ARCH)
      -- * Pretty-printing
      pprCmmGroup, pprSection, pprStatic
+#endif
   ) where
 
+import GHC.Cmm.Node
+import GHC.Runtime.Heap.Layout
+import GHC.Cmm.Expr
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Prelude
-
 import GHC.Platform
 import GHC.Types.Id
 import GHC.Types.CostCentre
 import GHC.Cmm.CLabel
 import GHC.Cmm.BlockId
-import GHC.Cmm.Node
-import GHC.Runtime.Heap.Layout
-import GHC.Cmm.Expr
 import GHC.Cmm.Dataflow.Block
 import GHC.Cmm.Dataflow.Graph
 import GHC.Cmm.Dataflow.Label
 import GHC.Utils.Outputable
-
 import Data.Void (Void)
 import Data.List (intersperse)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+#endif
 
+#if !defined(wasm32_HOST_ARCH)
 -----------------------------------------------------------------------------
 --  Cmm, GenCmm
 -----------------------------------------------------------------------------
@@ -548,3 +554,4 @@ pprSectionType s = doubleQuotes $ case s of
   FiniArray               -> text "finiarray"
   CString                 -> text "cstring"
   IPE                     -> text "ipe"
+#endif

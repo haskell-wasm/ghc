@@ -9,6 +9,7 @@
 -----------------------------------------------------------------------------
 
 module GHC.StgToCmm.Layout (
+#if !defined(wasm32_HOST_ARCH)
         mkArgDescr,
         emitCall, emitReturn, adjustHpBackwards,
 
@@ -16,6 +17,7 @@ module GHC.StgToCmm.Layout (
         emitClosureAndInfoTable,
 
         slowCall, directCall,
+#endif
 
         FieldOffOrPadding(..),
         ClosureHeader(..),
@@ -24,42 +26,56 @@ module GHC.StgToCmm.Layout (
         mkVirtConstrOffsets,
         mkVirtConstrSizes,
         litsWithPaddingToLits,
+#if !defined(wasm32_HOST_ARCH)
         getHpRelOffset,
+#endif
 
         ArgRep(..), toArgRep, toArgRepOrV, idArgRep, argRepSizeW, -- re-exported from GHC.StgToCmm.ArgRep
+#if !defined(wasm32_HOST_ARCH)
         getArgAmode, getNonVoidArgAmodes
+#endif
   ) where
 
 
 import GHC.Prelude hiding ((<*>))
 
 import GHC.StgToCmm.Closure
-import GHC.StgToCmm.Env
 import GHC.StgToCmm.ArgRep -- notably: ( slowCallPattern )
+#if !defined(wasm32_HOST_ARCH)
+import GHC.StgToCmm.Env
 import GHC.StgToCmm.Ticky
 import GHC.StgToCmm.Monad
 import GHC.StgToCmm.Lit
 import GHC.StgToCmm.Utils
 
 import GHC.Cmm.Graph
-import GHC.Runtime.Heap.Layout
 import GHC.Cmm.BlockId
 import GHC.Cmm
 import GHC.Cmm.Utils
 import GHC.Cmm.Info
 import GHC.Cmm.CLabel
+#endif
 import GHC.Stg.Syntax
+import GHC.Runtime.Heap.Layout
+import GHC.Core.TyCon    ( PrimRep(..), primRepSizeB )
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Types.Id
-import GHC.Core.TyCon    ( PrimRep(..), PrimOrVoidRep(..), primRepSizeB )
+import GHC.Core.TyCon    ( PrimOrVoidRep(..) )
 import GHC.Types.Basic   ( RepArity )
+#endif
 import GHC.Platform
 import GHC.Platform.Profile
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Unit
+#endif
 
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Utils.Misc
+#endif
 import Data.List (mapAccumL, partition, sortBy)
 import Data.Ord (comparing)
 import GHC.Utils.Outputable
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Utils.Panic
 import GHC.Utils.Constants (debugIsOn)
 import GHC.Data.FastString
@@ -67,8 +83,10 @@ import Control.Monad
 import GHC.StgToCmm.Config (stgToCmmPlatform)
 import GHC.StgToCmm.Types
 import Data.List.NonEmpty (nonEmpty)
+#endif
 import GHC.Types.Literal
 
+#if !defined(wasm32_HOST_ARCH)
 ------------------------------------------------------------------------
 --                Call and return sequences
 ------------------------------------------------------------------------
@@ -400,12 +418,13 @@ slowArgs platform args sccProfilingEnabled  -- careful: reps contains voids (V),
             V16 -> "v16"
             _   -> "d"
 
-
+#endif
 
 -------------------------------------------------------------------------
 ----        Laying out objects on the heap and stack
 -------------------------------------------------------------------------
 
+#if !defined(wasm32_HOST_ARCH)
 -- The heap always grows upwards, so hpRel is easy to compute
 hpRel :: VirtualHpOffset         -- virtual offset of Hp
       -> VirtualHpOffset         -- virtual offset of The Thing
@@ -418,6 +437,7 @@ getHpRelOffset virtual_offset
   = do platform <- getPlatform
        hp_usg <- getHpUsage
        return (cmmRegOffW platform (hpReg platform) (hpRel (realHp hp_usg) virtual_offset))
+#endif
 
 data FieldOffOrPadding a
     = FieldOff (NonVoid a) -- Something that needs an offset.
@@ -584,6 +604,7 @@ mkVirtConstrSizes profile field_reps
 -------------------------------------------------------------------------
 
 -- bring in ARG_P, ARG_N, etc.
+#if !defined(wasm32_HOST_ARCH)
 #include "FunTypes.h"
 
 mkArgDescr :: Platform -> [Id] -> ArgDescr
@@ -693,3 +714,4 @@ emitClosureAndInfoTable platform info_tbl conv args body
        ; let entry_lbl = toEntryLbl platform (cit_lbl info_tbl)
        ; emitProcWithConvention conv (Just info_tbl) entry_lbl args blks
        }
+#endif

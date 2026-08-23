@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module GHC.Driver.Config.Interpreter
   ( initInterpOpts
   )
@@ -8,7 +10,9 @@ import GHC.Runtime.Interpreter.Init
 import GHC.Driver.DynFlags
 import GHC.Driver.Session
 import GHC.Driver.Config.Finder
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Driver.Config.StgToJS
+#endif
 import GHC.SysTools.Tasks
 import GHC.Linker.Executable
 
@@ -37,7 +41,9 @@ initInterpOpts dflags = do
     , interpBrowserPlaywrightLaunchOpts = ghciBrowserPlaywrightLaunchOpts dflags
     , interpJsInterp = js_interp
     , interpTmpDir = tmpDir dflags
+#if !defined(wasm32_HOST_ARCH)
     , interpJsCodegenCfg = initStgToJSConfig dflags
+#endif
     , interpFinderOpts  = initFinderOpts dflags
     , interpVerbosity = verbosity dflags
     , interpLdConfig = configureLd dflags

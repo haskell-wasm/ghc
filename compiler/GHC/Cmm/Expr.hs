@@ -1,56 +1,64 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module GHC.Cmm.Expr
-    ( CmmExpr(..), cmmExprType, cmmExprWidth, cmmExprAlignment, maybeInvertCmmExpr
+    ( GlobalReg(..), node
+#if !defined(wasm32_HOST_ARCH)
     , CmmReg(..), cmmRegType, cmmRegWidth
+    , CmmExpr(..), cmmExprType, cmmExprWidth, cmmExprAlignment, maybeInvertCmmExpr
     , CmmLit(..), cmmLitType, mkCmmFloatLit
     , AlignmentSpec(..)
       -- TODO: Remove:
     , LocalReg(..), localRegType
-    , GlobalReg(..), isArgReg, globalRegSpillType
+    , isArgReg, globalRegSpillType
     , GlobalRegUse(..)
     , spReg, hpReg, spLimReg, hpLimReg, nodeReg
     , currentTSOReg, currentNurseryReg, hpAllocReg, cccsReg
-    , node, baseReg
+    , baseReg
 
     , DefinerOfRegs, UserOfRegs
     , foldRegsDefd, foldRegsUsed
     , foldLocalRegsDefd, foldLocalRegsUsed
+    , LocalRegSet
+#endif
 
-    , RegSet, LocalRegSet, GlobalRegSet
+    , RegSet, GlobalRegSet
     , emptyRegSet, elemRegSet, extendRegSet, deleteFromRegSet, mkRegSet
     , plusRegSet, minusRegSet, timesRegSet, sizeRegSet, nullRegSet
     , regSetToList
 
+#if !defined(wasm32_HOST_ARCH)
     , isTrivialCmmExpr
     , hasNoGlobalRegs
     , isLit
     , isComparisonExpr
 
     , Area(..)
+#endif
     , module GHC.Cmm.MachOp
     , module GHC.Cmm.Type
     )
 where
 
 import GHC.Prelude
-
-import GHC.Platform
-import GHC.Cmm.BlockId
-import GHC.Cmm.CLabel
 import GHC.Cmm.MachOp
 import GHC.Cmm.Type
 import GHC.Cmm.Reg
+import Data.Set (Set)
+import qualified Data.Set as Set
+#if !defined(wasm32_HOST_ARCH)
+import GHC.Platform
+import GHC.Cmm.BlockId
+import GHC.Cmm.CLabel
 import GHC.Utils.Panic (panic, pprPanic)
 import GHC.Utils.Outputable
 import GHC.Types.Literal.Floating
 
 import Data.Maybe
-import Data.Set (Set)
-import qualified Data.Set as Set
-
 import GHC.Types.Basic (Alignment, mkAlignment, alignmentOf)
+#endif
 
+#if !defined(wasm32_HOST_ARCH)
 -----------------------------------------------------------------------------
 --              CmmExpr
 -- An expression.  Expressions have no side effects.
@@ -326,6 +334,8 @@ isComparisonExpr (CmmMachOp op _) = isComparisonMachOp op
 isComparisonExpr _                = False
 
 
+#endif
+
 -----------------------------------------------------------------------------
 --    Register-use information for expressions and other types
 -----------------------------------------------------------------------------
@@ -339,7 +349,9 @@ isComparisonExpr _                = False
 -- Sets.
 
 type RegSet r     = Set r
+#if !defined(wasm32_HOST_ARCH)
 type LocalRegSet  = RegSet LocalReg
+#endif
 type GlobalRegSet = RegSet GlobalReg
 
 emptyRegSet             :: RegSet r
@@ -364,6 +376,7 @@ timesRegSet      = Set.intersection
 sizeRegSet       = Set.size
 regSetToList     = Set.toList
 
+#if !defined(wasm32_HOST_ARCH)
 class Ord r => UserOfRegs r a where
   foldRegsUsed :: Platform -> (b -> r -> b) -> b -> a -> b
 
@@ -595,3 +608,4 @@ ppr_offset i
 
 commafy :: [SDoc] -> SDoc
 commafy xs = fsep $ punctuate comma xs
+#endif
