@@ -29,6 +29,7 @@ module GHC.Runtime.Interpreter.Types
    -- * IServ
    , IServ
    , IServConfig(..)
+#if !defined(wasm32_HOST_ARCH)
    -- * JSInterp
    , JSInterp
    , JSInterpExtra (..)
@@ -36,6 +37,7 @@ module GHC.Runtime.Interpreter.Types
    , JSState (..)
    , NodeJsSettings (..)
    , defaultNodeJsSettings
+#endif
    , WasmInterp
    , WasmInterpConfig (..)
    )
@@ -52,19 +54,25 @@ import GHC.Platform
 #if defined(HAVE_INTERNAL_INTERPRETER)
 import GHC.Platform.Ways
 #endif
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Utils.TmpFs
 import GHC.Utils.Logger
 import GHC.Unit.Env
+#endif
 import GHC.Unit.State
+#if !defined(wasm32_HOST_ARCH)
 import GHC.Unit.Types
 import GHC.StgToJS.Types
 import GHC.StgToJS.Linker.Types
+#endif
 import GHC.Runtime.Interpreter.Types.SymbolCache
 
 import Control.Concurrent
 import System.Process   ( ProcessHandle, CreateProcess )
+#if !defined(wasm32_HOST_ARCH)
 import System.IO
 import GHC.Unit.Finder.Types (FinderCache, FinderOpts)
+#endif
 
 -- | Interpreter
 data Interp = Interp
@@ -89,7 +97,9 @@ data InterpInstance
 
 data ExtInterp
   = ExtIServ !IServ
+#if !defined(wasm32_HOST_ARCH)
   | ExtJS !JSInterp
+#endif
   | ExtWasm !WasmInterp
 
 -- | External interpreter
@@ -105,7 +115,9 @@ data ExtInterpState cfg details = ExtInterpState
 type ExtInterpStatusVar d = MVar (InterpStatus (ExtInterpInstance d))
 
 type IServ    = ExtInterpState IServConfig    ()
+#if !defined(wasm32_HOST_ARCH)
 type JSInterp = ExtInterpState JSInterpConfig JSInterpExtra
+#endif
 type WasmInterp = ExtInterpState WasmInterpConfig ()
 
 data InterpProcess = InterpProcess
@@ -151,7 +163,9 @@ interpreterProfiled interp = case interpInstance interp of
 #endif
   ExternalInterp ext -> case ext of
     ExtIServ i -> iservConfProfiled (interpConfig i)
+#if !defined(wasm32_HOST_ARCH)
     ExtJS {}   -> False -- we don't support profiling yet in the JS backend
+#endif
     ExtWasm i -> wasmInterpProfiled $ interpConfig i
 
 -- | Interpreter uses Dynamic way
@@ -162,9 +176,12 @@ interpreterDynamic interp = case interpInstance interp of
 #endif
   ExternalInterp ext -> case ext of
     ExtIServ i -> iservConfDynamic (interpConfig i)
+#if !defined(wasm32_HOST_ARCH)
     ExtJS {}   -> False -- dynamic doesn't make sense for JS
+#endif
     ExtWasm {} -> True  -- wasm dyld can only load dynamic code
 
+#if !defined(wasm32_HOST_ARCH)
 ------------------------
 -- JS Stuff
 ------------------------
@@ -210,6 +227,7 @@ data JSInterpConfig = JSInterpConfig
   , jsInterpFinderOpts  :: !FinderOpts
   , jsInterpFinderCache :: !FinderCache
   }
+#endif
 
 ------------------------
 -- Wasm Stuff
