@@ -57,6 +57,11 @@ Flag internal-interpreter
     Default: False
     Manual: True
 
+Flag ghci
+    Description: Build the GHCi user interface, including for external interpreters.
+    Default: False
+    Manual: True
+
 Flag dynamic-system-linker
     Description: The system can load dynamic code. This is not the case for musl.
     Default: True
@@ -156,6 +161,25 @@ Library
     if flag(internal-interpreter)
         CPP-Options: -DHAVE_INTERNAL_INTERPRETER
         cc-options: -DHAVE_INTERNAL_INTERPRETER
+
+    if flag(ghci) || flag(internal-interpreter)
+        Build-Depends:
+            ghc-prim       >= 0.5.0 && < 0.14,
+            haskeline      == 0.8.*
+        CPP-Options: -DHAVE_GHCI
+        Exposed-Modules:
+            GHCi.Leak
+            GHCi.UI
+            GHCi.UI.Exception
+            GHCi.UI.Info
+            GHCi.UI.Monad
+            GHCi.UI.Print
+            GHCi.Util
+        Other-Extensions:
+            LambdaCase
+            MultiWayIf
+            OverloadedStrings
+            ViewPatterns
 
     -- if no dynamic system linker is available, don't try DLLs.
     if flag(dynamic-system-linker)
@@ -400,6 +424,7 @@ Library
         GHC.Driver.Errors.Ppr
         GHC.Driver.Errors.Types
         GHC.Driver.Flags
+        GHC.Driver.Frontend
         GHC.Driver.Hooks
         GHC.Driver.LlvmConfigCache
         GHC.Driver.MakeSem
@@ -420,6 +445,8 @@ Library
         GHC.Driver.Ppr
         GHC.Driver.Session
         GHC.Driver.Session.Inspect
+        GHC.Driver.Session.Lint
+        GHC.Driver.Session.Mode
         GHC.Driver.Session.Units
         GHC.Hs
         GHC.Hs.Basic

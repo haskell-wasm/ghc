@@ -32,7 +32,7 @@ Adding `-V`, `-VV`, `-VVV` can output more information from Shake and Hadrian fo
 
 #### Type 1: `openFile: does not exist`
 
-**Example:** `hadrian: _build/stage1/ghc/GHCi/UI.o: openFile: does not exist (No such file or directory)`
+**Example:** `hadrian: _build/stage1/compiler/build/GHCi/UI.o: openFile: does not exist (No such file or directory)`
 
 **Cause:** The build system tries to execute some *raw* I/O operation, which is not captured properly by shake build or any other handling mechanism.
 
