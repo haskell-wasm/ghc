@@ -1,234 +1,1400 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ghc-in-browser</title>
+    <title>Haskell playground · GHCi</title>
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/modern-normalize/modern-normalize.min.css"
+      href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css"
     />
     <style>
+      * {
+        box-sizing: border-box;
+      }
       html,
       body {
         height: 100%;
+        margin: 0;
       }
       body {
-        margin: 0;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: #0f172a;
-        color: #e5e7eb;
+        background: #101218;
+        color: #e0e4ed;
+        font:
+          14px system-ui,
+          sans-serif;
       }
-      .app {
-        height: 100vh;
+      button {
+        font: inherit;
+        color: inherit;
+        background: #242936;
+        border: 1px solid #353d4e;
+        border-radius: 4px;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      button:hover,
+      button:focus-visible {
+        background: #374259;
+      }
+      #app {
+        height: 100dvh;
         display: grid;
-        gap: 0.5rem;
-        padding: 0.5rem;
+        grid-template-rows: auto minmax(0, 1fr) auto;
       }
-      @media (min-width: 800px) {
-        .app {
-          grid-template-columns: 1fr 1fr;
-        }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 16px;
+        border-bottom: 1px solid #353d4e;
       }
-      @media (max-width: 799.98px) {
-        .app {
-          grid-template-rows: 1fr 1fr;
-        }
+      header strong {
+        font-size: 16px;
       }
-      .pane {
-        background: #111827;
-        border: 1px solid #1f2937;
-        border-radius: 12px;
+      .muted {
+        color: #a5aec0;
+      }
+      main {
+        display: grid;
+        min-height: 0;
+        grid-template-columns: 210px minmax(0, 1fr);
+      }
+      aside {
+        min-height: 0;
+        overflow: auto;
+        border-right: 1px solid #353d4e;
+        padding: 12px 8px;
+      }
+      .actions {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin: 10px 0;
+      }
+      .actions button {
+        padding: 4px 6px;
+        font-size: 12px;
+      }
+      #files button {
+        display: block;
+        border: 0;
+        text-align: left;
+        width: 100%;
+        background: transparent;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #files button:hover,
+      #files button.selected {
+        background: #242936;
+      }
+      #panes {
+        display: grid;
+        grid-template-rows: minmax(140px, 3fr) minmax(180px, 2fr);
+        min-width: 0;
+        min-height: 0;
+      }
+      #source {
         display: flex;
         flex-direction: column;
         min-height: 0;
       }
-      header {
-        padding: 0.5rem 0.75rem;
-        border-bottom: 1px solid #1f2937;
-        font-weight: 600;
+      #tabs {
+        display: flex;
+        flex-shrink: 0;
+        overflow: auto;
+        background: #171b24;
+        min-height: 34px;
+      }
+      #tabs button {
+        border-radius: 0;
+        border: 0;
+        border-right: 1px solid #353d4e;
+        background: transparent;
+        white-space: nowrap;
+      }
+      #tabs button[aria-selected="true"] {
+        background: #1e1e1e;
+        border-top: 2px solid #82b4ff;
       }
       #editor {
         flex: 1;
         min-height: 0;
       }
-      .right {
-        padding: 0.6rem;
-        gap: 0.6rem;
-      }
-      .controls {
+      #console {
         display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        margin-bottom: 0.4rem;
+        flex-direction: column;
+        min-height: 0;
+        border-top: 1px solid #353d4e;
       }
-      .controls input[type="text"] {
+      #console header {
+        padding: 6px 12px;
+      }
+      #console header span {
         flex: 1;
-        min-width: 200px;
-        background: #0b1020;
-        color: #e5e7eb;
-        border: 1px solid #223;
-        border-radius: 8px;
-        padding: 0.55rem;
       }
-      .controls button {
-        background: #22c55e;
-        border: none;
-        border-radius: 8px;
-        padding: 0.55rem 0.85rem;
-        font-weight: 600;
-        cursor: pointer;
+      #terminal {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        padding: 8px;
       }
-      .outputs {
-        display: block;
+      footer {
+        padding: 6px 12px;
+        border-top: 1px solid #353d4e;
+        font-size: 12px;
       }
-      .outputs .label {
-        font-size: 0.85rem;
-        opacity: 0.8;
-        margin: 0.35rem 0;
+      #status[data-error] {
+        color: #ffacac;
       }
-      .outputs textarea {
-        display: block;
-        width: 100%;
-        min-height: 30vh;
-        background: #0b1020;
-        color: #d1fae5;
-        border: 1px solid #223;
-        border-radius: 8px;
-        padding: 0.6rem;
-        resize: vertical;
-      }
-      .stderr {
-        color: #fee2e2;
+      @media (max-width: 700px) {
+        main {
+          grid-template-columns: 130px minmax(0, 1fr);
+        }
+        header .muted {
+          display: none;
+        }
       }
     </style>
-
-    <script async type="module">
-      import * as monaco from "https://cdn.jsdelivr.net/npm/monaco-editor/+esm";
-      import {
-        ConsoleStdout,
-        File,
-        OpenFile,
-        PreopenDirectory,
-        WASI,
-      } from "https://esm.sh/gh/haskell-wasm/browser_wasi_shim";
-      import { DyLDBrowserHost, main } from "./dyld.mjs";
-
-      const rootfs = new PreopenDirectory("/", []);
-
-      const bsdtar_wasi = new WASI(
-        ["bsdtar.wasm", "-x"],
-        [],
-        [
-          new OpenFile(new File(new Uint8Array(), { readonly: true })),
-          ConsoleStdout.lineBuffered((msg) => console.info(msg)),
-          ConsoleStdout.lineBuffered((msg) => console.warn(msg)),
-          rootfs,
-        ],
-        { debug: false }
-      );
-
-      const [{ instance }, rootfs_bytes] = await Promise.all([
-        WebAssembly.instantiateStreaming(
-          fetch("https://haskell-wasm.github.io/bsdtar-wasm/bsdtar.wasm"),
-          { wasi_snapshot_preview1: bsdtar_wasi.wasiImport }
-        ),
-        fetch("./rootfs.tar.zst").then((r) => r.bytes()),
-      ]);
-
-      bsdtar_wasi.fds[0] = new OpenFile(
-        new File(rootfs_bytes, { readonly: true })
-      );
-      bsdtar_wasi.start(instance);
-
-      if (document.readyState === "loading") {
-        await new Promise((res) =>
-          document.addEventListener("DOMContentLoaded", res, { once: true })
-        );
-      }
-
-      window.editor = monaco.editor.create(document.getElementById("editor"), {
-        value: 'main :: IO ()\nmain = putStrLn "Hello, Haskell!"\n',
-        language: "haskell",
-        automaticLayout: true,
-        minimap: { enabled: false },
-        theme: "vs-dark",
-        fontSize: 14,
-      });
-
-      const dyld = await main({
-        rpc: new DyLDBrowserHost({
-          rootfs,
-          stdout: (msg) => {
-            document.getElementById("stdout").value += `${msg}\n`;
-          },
-          stderr: (msg) => {
-            document.getElementById("stderr").value += `${msg}\n`;
-          },
-        }),
-        searchDirs: [
-          "/tmp/clib",
-          "/tmp/hslib/lib/wasm32-wasi-ghc-9.15.20251024",
-        ],
-        mainSoPath: "/tmp/libplayground001.so",
-        args: ["libplayground001.so", "+RTS", "-c", "-RTS"],
-        isIserv: false,
-      });
-      const main_func = await dyld.exportFuncs.myMain("/tmp/hslib/lib");
-
-      document.getElementById("runBtn").addEventListener("click", async () => {
-        document.getElementById("runBtn").disabled = true;
-
-        try {
-          document.getElementById("stdout").value = "";
-          document.getElementById("stderr").value = "";
-
-          await main_func(
-            document.getElementById("ghcArgs").value,
-            editor.getValue()
-          );
-        } finally {
-          document.getElementById("runBtn").disabled = false;
+    <script>
+      window.addEventListener("error", (event) => {
+        const status = document.getElementById("status");
+        if (status) {
+          status.textContent = event.message || "Unable to load the playground";
+          status.dataset.error = "true";
         }
       });
-
-      document.getElementById("runBtn").disabled = false;
+      window.addEventListener("unhandledrejection", (event) => {
+        const status = document.getElementById("status");
+        if (status) {
+          status.textContent = event.reason?.message || String(event.reason);
+          status.dataset.error = "true";
+        }
+      });
+    </script>
+    <script>
+      // Keep VS Code services as one module graph. Bundling each package separately
+      // duplicates their registries; this loader also turns CSS imports into strings.
+      const version = "37.0.0";
+      window.esmsInitOptions = {
+        shimMode: true,
+        resolve(id, parent, resolve) {
+          if (id.startsWith("@codingame/")) {
+            const [scope, name, ...parts] = id.split("/");
+            let path = parts.join("/");
+            if (!path)
+              path =
+                name === "monaco-vscode-api"
+                  ? "services.js"
+                  : name === "monaco-vscode-editor-api"
+                    ? "esm/vs/editor/editor.api.js"
+                    : "index.js";
+            else {
+              if (path.startsWith("vscode/"))
+                path = path.replace("vscode/", "vscode/src/");
+              if (!/\.(js|css)$/.test(path)) path += ".js";
+            }
+            return `https://cdn.jsdelivr.net/npm/${scope}/${name}@${version}/${path}`;
+          }
+          return resolve(id, parent);
+        },
+        async fetch(url, opts) {
+          const response = await fetch(url, opts);
+          if (!response.ok) throw new Error(`${response.status}: ${url}`);
+          if (url.endsWith(".css")) {
+            const css = (await response.text()).replace(
+              /url\(\s*(['"]?)(?!data:|https?:|#)([^)'"\s]+)\1\s*\)/g,
+              (_, q, path) => `url("${new URL(path, url)}")`,
+            );
+            return new Response(`export default ${JSON.stringify(css)}`, {
+              headers: { "Content-Type": "application/javascript" },
+            });
+          }
+          return response;
+        },
+      };
+    </script>
+    <script
+      async
+      src="https://cdn.jsdelivr.net/npm/es-module-shims@2.6.2/dist/es-module-shims.js"
+    ></script>
+    <script type="importmap-shim">
+      {
+        "imports": {
+          "dompurify": "https://cdn.jsdelivr.net/npm/dompurify@3.4.15/+esm",
+          "marked": "https://cdn.jsdelivr.net/npm/marked@14.0.0/+esm",
+          "jschardet": "https://cdn.jsdelivr.net/npm/jschardet@3.1.4/+esm",
+          "@vscode/iconv-lite-umd": "https://cdn.jsdelivr.net/npm/@vscode/iconv-lite-umd@0.7.1/+esm",
+          "@vscode/diff": "https://cdn.jsdelivr.net/npm/@vscode/diff@0.0.2-7/+esm"
+        }
+      }
     </script>
   </head>
   <body>
-    <div class="app">
-      <section class="pane">
-        <header>Haskell Source</header>
-        <div id="editor"></div>
-      </section>
-
-      <section class="pane right">
-        <header>Controls / Output</header>
-        <div class="controls">
-          <input
-            id="ghcArgs"
-            type="text"
-            placeholder="GHC args"
-            style="font-family: ui-monospace, Menlo, Consolas, monospace"
-          />
-          <button id="runBtn" disabled="true">Run</button>
+    <div id="app">
+      <header>
+        <strong>Haskell playground</strong
+        ><span class="muted"
+          >Files save automatically · :load Main.hs to begin</span
+        >
+      </header>
+      <main>
+        <aside aria-label="Workspace files">
+          <strong>WORKSPACE</strong>
+          <div class="actions">
+            <button id="new-file">New file</button
+            ><button id="rename-file">Rename</button
+            ><button id="delete-file">Delete</button>
+          </div>
+          <nav id="files" aria-label="Files"></nav>
+        </aside>
+        <div id="panes">
+          <section id="source" aria-label="Source editor">
+            <div id="tabs" role="tablist" aria-label="Open files"></div>
+            <div id="editor"></div>
+          </section>
+          <section id="console" aria-label="GHCi terminal">
+            <header>
+              <span>GHCi</span><button id="load-file">Load file</button
+              ><button id="reload">Reload</button>
+            </header>
+            <div id="terminal"></div>
+          </section>
         </div>
-        <div class="outputs">
-          <div class="label">stdout</div>
-          <textarea
-            id="stdout"
-            readonly
-            style="font-family: ui-monospace, Menlo, Consolas, monospace"
-          ></textarea>
-          <div class="label">stderr</div>
-          <textarea
-            id="stderr"
-            class="stderr"
-            readonly
-            style="font-family: ui-monospace, Menlo, Consolas, monospace"
-          ></textarea>
-        </div>
-      </section>
+      </main>
+      <footer id="status" role="status">Loading editor…</footer>
     </div>
+    <script type="module-shim">
+      import { initialize } from "@codingame/monaco-vscode-api";
+      import getModelServiceOverride from "@codingame/monaco-vscode-model-service-override";
+      import * as monaco from "@codingame/monaco-vscode-editor-api";
+      import { registerFileSystemOverlay } from "@codingame/monaco-vscode-files-service-override";
+      import {
+        FileType,
+        FileChangeType,
+        FileSystemProviderCapabilities,
+        FileSystemProviderError,
+        FileSystemProviderErrorCode,
+      } from "@codingame/monaco-vscode-api/vscode/vs/platform/files/common/files";
+      import { Event } from "@codingame/monaco-vscode-api/vscode/vs/base/common/event";
+      import { Terminal } from "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/+esm";
+      import { FitAddon } from "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/+esm";
+      import stringWidth from "https://cdn.jsdelivr.net/npm/string-width@7.2.0/+esm";
+      import * as wasi from "https://esm.sh/gh/haskell-wasm/browser_wasi_shim";
+      import { DyLDBrowserHost, main } from "./dyld.mjs";
+      const { Uri: URI, Emitter } = monaco;
+      // browser_wasi_shim implements synchronous WASI calls with Directory/File nodes.
+      // Mount one shared workspace in that tree and back it with OPFS. Both the editor
+      // and WASI use these exact nodes. Await flush() before accepting a GHCi command
+      // and whenever GHCi requests its next input, including after a failed command.
+      // OPFS operations are asynchronous, so flushing is an explicit durability barrier.
+      async function createWorkspace(rootfs, opfsHandle) {
+        const changed = new Emitter();
+        const mount = new wasi.Directory(new Map());
+        const fail = (code, message) => {
+          throw new FileSystemProviderError(message, code);
+        };
+        const uri = (path) => URI.file(`/workspace${path ? `/${path}` : ""}`);
+        const isDir = (node) => node instanceof wasi.Directory;
+        const touch = (node) => {
+          const now = BigInt(Date.now()) * 1000000n;
+          // Keep VS Code's millisecond etags distinct even for two quick saves.
+          node.mtim = node.ctim = now > node.mtim ? now : node.mtim + 1000000n;
+        };
+        const sameBytes = (a, b) =>
+          a.length === b.length && a.every((byte, i) => byte === b[i]);
+
+        function pathOf(resource) {
+          let path;
+          if (typeof resource === "string") {
+            path = resource;
+            if (path.startsWith("/")) {
+              if (path !== "/workspace" && !path.startsWith("/workspace/")) {
+                return fail(
+                  FileSystemProviderErrorCode.FileNotFound,
+                  "Outside the workspace",
+                );
+              }
+              path = path.slice("/workspace".length).replace(/^\//, "");
+            }
+          } else {
+            if (resource.scheme !== "file" || resource.authority) {
+              return fail(
+                FileSystemProviderErrorCode.FileNotFound,
+                "Outside the workspace",
+              );
+            }
+            return pathOf(resource.path);
+          }
+          path = path.replace(/\/$/, "");
+          if (
+            path.includes("\\") ||
+            path.includes("\0") ||
+            (path &&
+              path
+                .split("/")
+                .some((part) => !part || part === "." || part === ".."))
+          ) {
+            return fail(
+              FileSystemProviderErrorCode.NoPermissions,
+              "Invalid workspace path",
+            );
+          }
+          return path;
+        }
+
+        function lookup(path) {
+          let node = mount;
+          for (const part of path ? path.split("/") : []) {
+            if (!isDir(node))
+              return fail(FileSystemProviderErrorCode.FileNotADirectory, path);
+            node = node.contents.get(part);
+            if (!node)
+              return fail(FileSystemProviderErrorCode.FileNotFound, path);
+          }
+          return node;
+        }
+
+        function parentOf(path) {
+          if (!path)
+            return fail(
+              FileSystemProviderErrorCode.NoPermissions,
+              "Cannot replace the workspace root",
+            );
+          const parts = path.split("/");
+          const name = parts.pop();
+          const parent = lookup(parts.join("/"));
+          if (!isDir(parent))
+            return fail(FileSystemProviderErrorCode.FileNotADirectory, path);
+          return { parent, name, node: parent.contents.get(name) };
+        }
+
+        async function hydrate(handle, dir) {
+          for await (const [name, child] of handle.entries()) {
+            // Apply the same validation to persisted names as to editor paths.
+            pathOf(name);
+            let node;
+            if (child.kind === "directory") {
+              node = new wasi.Directory(new Map());
+              node.parent = dir;
+              await hydrate(child, node);
+            } else {
+              const file = await child.getFile();
+              node = new wasi.File(new Uint8Array(await file.arrayBuffer()));
+              node.mtim = node.ctim = BigInt(file.lastModified) * 1000000n;
+            }
+            dir.contents.set(name, node);
+          }
+        }
+        await hydrate(opfsHandle, mount);
+        if (rootfs.dir.contents.has("workspace"))
+          throw new Error("The root filesystem already contains /workspace");
+        mount.parent = rootfs.dir;
+        rootfs.dir.contents.set("workspace", mount);
+
+        let observed = new Map();
+        function snapshot() {
+          const files = new Map();
+          function visit(node, path, ancestors) {
+            if (ancestors.has(node))
+              throw new Error("OPFS cannot persist a directory symlink cycle");
+            if (!isDir(node) && !(node instanceof wasi.File)) {
+              throw new Error(
+                `Cannot persist unsupported WASI inode: /workspace/${path}`,
+              );
+            }
+            const previous = observed.get(path);
+            const entry = {
+              kind: isDir(node) ? "directory" : "file",
+              node,
+              mtime: node.mtim,
+            };
+            if (entry.kind === "file") {
+              entry.bytes = node.data.slice();
+              // The shim's write calls do not update mtime themselves.
+              if (
+                previous?.kind === "file" &&
+                !sameBytes(previous.bytes, entry.bytes) &&
+                previous.mtime === node.mtim
+              ) {
+                touch(node);
+                entry.mtime = node.mtim;
+              }
+            }
+            files.set(path, entry);
+            if (isDir(node)) {
+              const below = new Set(ancestors).add(node);
+              for (const [name, child] of node.contents) {
+                pathOf(name);
+                visit(child, path ? `${path}/${name}` : name, below);
+              }
+            }
+          }
+          visit(mount, "", new Set());
+          observed = files;
+          return files;
+        }
+
+        let committed = snapshot();
+        let pending = Promise.resolve();
+        let pendingWrites = 0;
+        let storageUncertain = false;
+        // Reconcile the full directory structure, including empty directories and
+        // files created by Haskell. Write renamed destinations before deleting sources.
+        async function persist(files) {
+          const directories = new Map([["", opfsHandle]]);
+          for (const [path, entry] of files) {
+            if (!path) continue;
+            const slash = path.lastIndexOf("/");
+            const parent = directories.get(
+              slash < 0 ? "" : path.slice(0, slash),
+            );
+            const name = path.slice(slash + 1);
+            const previous = committed.get(path);
+            async function openChild(method) {
+              try {
+                return await parent[method](name, { create: true });
+              } catch (error) {
+                if (error.name !== "TypeMismatchError") throw error;
+                await parent.removeEntry(name, { recursive: true });
+                return parent[method](name, { create: true });
+              }
+            }
+            if (entry.kind === "directory") {
+              directories.set(path, await openChild("getDirectoryHandle"));
+            } else if (
+              storageUncertain ||
+              !previous ||
+              previous.kind !== "file" ||
+              !sameBytes(previous.bytes, entry.bytes)
+            ) {
+              const handle = await openChild("getFileHandle");
+              const stream = await handle.createWritable();
+              try {
+                await stream.write(entry.bytes);
+                await stream.close();
+              } catch (error) {
+                await stream.abort().catch(() => {});
+                throw error;
+              }
+            }
+          }
+          for (const [path, handle] of directories) {
+            for await (const [name] of handle.entries()) {
+              if (!files.has(path ? `${path}/${name}` : name)) {
+                await handle.removeEntry(name, { recursive: true });
+              }
+            }
+          }
+        }
+
+        function flush() {
+          // Capture synchronously: an editor save during an earlier asynchronous flush
+          // gets a later snapshot and can never be overwritten by that earlier save.
+          const files = snapshot();
+          ++pendingWrites;
+          const operation = pending
+            .catch(() => {})
+            .then(async () => {
+              try {
+                await persist(files);
+                storageUncertain = false;
+              } catch (error) {
+                // A failed OPFS reconciliation may have committed only some writes.
+                // Retry from the current snapshot without trusting the previous diff.
+                storageUncertain = true;
+                throw error;
+              }
+              const events = [];
+              for (const [path, old] of committed) {
+                if (
+                  path &&
+                  (!files.has(path) || files.get(path).kind !== old.kind)
+                ) {
+                  events.push({
+                    type: FileChangeType.DELETED,
+                    resource: uri(path),
+                  });
+                }
+              }
+              for (const [path, entry] of files) {
+                if (!path) continue;
+                const old = committed.get(path);
+                if (!old || old.kind !== entry.kind) {
+                  events.push({
+                    type: FileChangeType.ADDED,
+                    resource: uri(path),
+                  });
+                } else if (
+                  entry.kind === "file" &&
+                  !sameBytes(old.bytes, entry.bytes)
+                ) {
+                  events.push({
+                    type: FileChangeType.UPDATED,
+                    resource: uri(path),
+                  });
+                }
+              }
+              committed = files;
+              if (events.length) changed.fire(events);
+            })
+            .finally(() => {
+              --pendingWrites;
+            });
+          pending = operation;
+          return operation;
+        }
+
+        const provider = {
+          capabilities:
+            FileSystemProviderCapabilities.FileReadWrite |
+            FileSystemProviderCapabilities.PathCaseSensitive,
+          onDidChangeCapabilities: Event.None,
+          onDidChangeFile: changed.event,
+          watch: () => ({ dispose() {} }),
+          async stat(resource) {
+            const path = pathOf(resource),
+              node = lookup(path);
+            const previous = observed.get(path);
+            // Detect WASI writes before an editor save checks its etag, even when
+            // GHCi has not reached its next input/persistence barrier yet.
+            if (
+              !isDir(node) &&
+              previous?.kind === "file" &&
+              previous.mtime === node.mtim &&
+              !sameBytes(previous.bytes, node.data)
+            )
+              touch(node);
+            return {
+              type: isDir(node) ? FileType.Directory : FileType.File,
+              ctime: Number(node.ctim / 1000000n),
+              mtime: Number(node.mtim / 1000000n),
+              size: isDir(node) ? 0 : node.data.byteLength,
+            };
+          },
+          async readdir(resource) {
+            const path = pathOf(resource),
+              node = lookup(path);
+            if (!isDir(node))
+              return fail(FileSystemProviderErrorCode.FileNotADirectory, path);
+            return [...node.contents].map(([name, child]) => [
+              name,
+              isDir(child) ? FileType.Directory : FileType.File,
+            ]);
+          },
+          async readFile(resource) {
+            const path = pathOf(resource),
+              node = lookup(path);
+            if (isDir(node))
+              return fail(FileSystemProviderErrorCode.FileIsADirectory, path);
+            return node.data.slice();
+          },
+          async writeFile(
+            resource,
+            content,
+            options = { create: true, overwrite: true },
+          ) {
+            const path = pathOf(resource),
+              { parent, name, node } = parentOf(path);
+            if (node && isDir(node))
+              return fail(FileSystemProviderErrorCode.FileIsADirectory, path);
+            if (node && !options.overwrite)
+              return fail(FileSystemProviderErrorCode.FileExists, path);
+            if (!node && !options.create)
+              return fail(FileSystemProviderErrorCode.FileNotFound, path);
+            const file = node || new wasi.File(new Uint8Array());
+            file.data = content.slice();
+            touch(file);
+            touch(parent);
+            parent.contents.set(name, file);
+            await flush();
+          },
+          async mkdir(resource) {
+            const path = pathOf(resource);
+            if (!path) return;
+            const { parent, name, node } = parentOf(path);
+            if (node) {
+              if (!isDir(node))
+                return fail(FileSystemProviderErrorCode.FileExists, path);
+              await flush();
+              return;
+            }
+            const directory = new wasi.Directory(new Map());
+            directory.parent = parent;
+            parent.contents.set(name, directory);
+            touch(parent);
+            await flush();
+          },
+          async delete(resource, options = { recursive: false }) {
+            const path = pathOf(resource),
+              { parent, name, node } = parentOf(path);
+            if (!node)
+              return fail(FileSystemProviderErrorCode.FileNotFound, path);
+            if (isDir(node) && node.contents.size && !options.recursive) {
+              return fail(
+                FileSystemProviderErrorCode.NoPermissions,
+                "Directory is not empty",
+              );
+            }
+            parent.contents.delete(name);
+            touch(parent);
+            await flush();
+          },
+          async rename(from, to, options = { overwrite: false }) {
+            const sourcePath = pathOf(from),
+              targetPath = pathOf(to);
+            if (sourcePath === targetPath) {
+              lookup(sourcePath);
+              await flush();
+              return;
+            }
+            const source = parentOf(sourcePath),
+              target = parentOf(targetPath);
+            if (!source.node)
+              return fail(FileSystemProviderErrorCode.FileNotFound, sourcePath);
+            if (targetPath.startsWith(`${sourcePath}/`)) {
+              return fail(
+                FileSystemProviderErrorCode.NoPermissions,
+                "Cannot move a directory into itself",
+              );
+            }
+            if (target.node && !options.overwrite)
+              return fail(FileSystemProviderErrorCode.FileExists, targetPath);
+            if (target.node && isDir(source.node) !== isDir(target.node)) {
+              return fail(
+                FileSystemProviderErrorCode.NoPermissions,
+                "Cannot replace a file with a directory or conversely",
+              );
+            }
+            if (
+              target.node &&
+              isDir(target.node) &&
+              target.node.contents.size
+            ) {
+              return fail(
+                FileSystemProviderErrorCode.NoPermissions,
+                "Cannot replace a nonempty directory",
+              );
+            }
+            source.parent.contents.delete(source.name);
+            target.parent.contents.set(target.name, source.node);
+            if (isDir(source.node)) source.node.parent = target.parent;
+            touch(source.parent);
+            touch(target.parent);
+            await flush();
+          },
+        };
+        return {
+          provider,
+          flush,
+          hasPendingWrites() {
+            if (pendingWrites || storageUncertain) return true;
+            try {
+              const current = snapshot();
+              if (current.size !== committed.size) return true;
+              for (const [path, entry] of current) {
+                const old = committed.get(path);
+                if (
+                  !old ||
+                  old.kind !== entry.kind ||
+                  (entry.kind === "file" && !sameBytes(old.bytes, entry.bytes))
+                )
+                  return true;
+              }
+              return false;
+            } catch {
+              return true;
+            }
+          },
+          async list() {
+            const files = [];
+            function visit(dir, prefix, ancestors) {
+              if (ancestors.has(dir))
+                throw new Error(
+                  "OPFS cannot persist a directory symlink cycle",
+                );
+              const below = new Set(ancestors).add(dir);
+              for (const [name, node] of dir.contents) {
+                const path = prefix ? `${prefix}/${name}` : name;
+                if (isDir(node)) visit(node, path, below);
+                else files.push(path);
+              }
+            }
+            visit(mount, "", new Set());
+            return files.sort();
+          },
+          read: async (path) =>
+            new TextDecoder().decode(
+              await provider.readFile(uri(pathOf(path))),
+            ),
+          readBytes: (path) => provider.readFile(uri(pathOf(path))),
+          write: (path, content) =>
+            provider.writeFile(
+              uri(pathOf(path)),
+              typeof content === "string"
+                ? new TextEncoder().encode(content)
+                : content,
+            ),
+          mkdir: (path) => provider.mkdir(uri(pathOf(path))),
+          remove: (path, recursive = false) =>
+            provider.delete(uri(pathOf(path)), { recursive }),
+          rename: (from, to) =>
+            provider.rename(uri(pathOf(from)), uri(pathOf(to)), {
+              overwrite: false,
+            }),
+        };
+      }
+      const status = document.getElementById("status");
+      function report(error) {
+        console.error(error);
+        status.textContent = error.message || String(error);
+        status.dataset.error = "true";
+      }
+      const action =
+        (f) =>
+        (...args) =>
+          Promise.resolve()
+            .then(() => f(...args))
+            .catch(report);
+      try {
+        if (!navigator.storage?.getDirectory)
+          throw new Error(
+            "OPFS requires HTTPS or localhost and a browser with origin private storage support.",
+          );
+        // The synchronous WASI mount is owned by this document. A second tab
+        // must not race it while reconciling the same persistent directory.
+        await new Promise((resolve, reject) => {
+          navigator.locks
+            .request(
+              "ghc-playground-workspace",
+              { ifAvailable: true },
+              async (lock) => {
+                if (!lock)
+                  throw new Error(
+                    "This workspace is open in another tab. Close that tab and reload.",
+                  );
+                resolve();
+                await new Promise(() => {});
+              },
+            )
+            .catch(reject);
+        });
+        const rootfs = new wasi.PreopenDirectory("/", []);
+        const opfs = await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle("ghc-playground", { create: true });
+        const workspace = await createWorkspace(rootfs, opfs);
+        registerFileSystemOverlay(10, workspace.provider);
+        const workerURL = URL.createObjectURL(
+          new Blob(
+            [
+              'import "https://esm.sh/@codingame/monaco-vscode-editor-api@37.0.0/esm/vs/editor/editor.worker.js?bundle";',
+            ],
+            { type: "text/javascript" },
+          ),
+        );
+        window.MonacoEnvironment = {
+          getWorker: () => new Worker(workerURL, { type: "module" }),
+        };
+        await initialize({ ...getModelServiceOverride() });
+        monaco.languages.register({
+          id: "haskell",
+          extensions: [".hs", ".lhs"],
+        });
+        monaco.languages.setMonarchTokensProvider("haskell", {
+          keywords: [
+            "module",
+            "where",
+            "import",
+            "qualified",
+            "as",
+            "hiding",
+            "let",
+            "in",
+            "do",
+            "case",
+            "of",
+            "if",
+            "then",
+            "else",
+            "data",
+            "type",
+            "newtype",
+            "class",
+            "instance",
+            "deriving",
+            "forall",
+          ],
+          tokenizer: {
+            root: [
+              [/--.*$/, "comment"],
+              [/\{-/, "comment", "@comment"],
+              [/"([^"\\]|\\.)*"/, "string"],
+              [/'([^'\\]|\\.)'/, "string"],
+              [/\b\d+(\.\d+)?\b/, "number"],
+              [/[A-Z][\w']*/, "type.identifier"],
+              [
+                /[a-z_][\w']*/,
+                { cases: { "@keywords": "keyword", "@default": "identifier" } },
+              ],
+            ],
+            comment: [
+              [/[^{}-]+/, "comment"],
+              [/\{-/, "comment", "@push"],
+              [/-\}/, "comment", "@pop"],
+              [/[{}-]/, "comment"],
+            ],
+          },
+        });
+        const editor = monaco.editor.create(document.getElementById("editor"), {
+          language: "haskell",
+          theme: "vs-dark",
+          automaticLayout: true,
+          minimap: { enabled: false },
+          fontSize: 14,
+          scrollBeyondLastLine: false,
+        });
+        const terminal = new Terminal({
+          convertEol: true,
+          cursorBlink: true,
+          scrollback: 10000,
+          fontSize: 14,
+          theme: { background: "#101218", foreground: "#e0e4ed" },
+        });
+        const fit = new FitAddon();
+        terminal.loadAddon(fit);
+        terminal.open(document.getElementById("terminal"));
+        new ResizeObserver(() => fit.fit()).observe(
+          document.getElementById("terminal"),
+        );
+        fit.fit();
+        const models = new Map();
+        let activePath;
+        let saveTimer;
+        let filePaths = [];
+        let fileOperations = Promise.resolve();
+        // File service notifications can arrive while save() is awaiting the
+        // provider. Enqueue their refresh, but never await that queue from an
+        // operation already running on it.
+        function fileOperation(operation) {
+          const result = fileOperations.catch(() => {}).then(operation);
+          fileOperations = result;
+          return result;
+        }
+        function scheduleSave() {
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(action(saveAll), 300);
+        }
+        function drawTabs() {
+          const tabs = document.getElementById("tabs");
+          tabs.replaceChildren();
+          for (const [path, entry] of models) {
+            const tab = document.createElement("span");
+            tab.setAttribute("role", "presentation");
+            tab.style.display = "inline-flex";
+            const button = document.createElement("button");
+            button.textContent =
+              path +
+              (entry.missing ? " (deleted)" : "") +
+              (entry.reference.object.isDirty() ? " •" : "");
+            button.setAttribute("role", "tab");
+            button.setAttribute("aria-selected", String(path === activePath));
+            button.addEventListener(
+              "click",
+              action(() => openFile(path)),
+            );
+            const close = document.createElement("button");
+            close.textContent = "×";
+            close.title = `Close ${path}`;
+            close.setAttribute("aria-label", `Close ${path}`);
+            close.addEventListener(
+              "click",
+              action(() => closeFile(path)),
+            );
+            tab.append(button, close);
+            tabs.append(tab);
+          }
+        }
+        function drawFiles() {
+          const list = document.getElementById("files");
+          list.replaceChildren();
+          for (const path of filePaths) {
+            const button = document.createElement("button");
+            button.textContent = path;
+            button.title = path;
+            button.className = path === activePath ? "selected" : "";
+            button.addEventListener(
+              "click",
+              action(() => openFile(path)),
+            );
+            list.append(button);
+          }
+        }
+        function disposeModel(path) {
+          const entry = models.get(path);
+          if (!entry) return;
+          if (path === activePath) {
+            editor.setModel(null);
+            activePath = undefined;
+          }
+          entry.listener.dispose();
+          entry.reference.dispose();
+          models.delete(path);
+        }
+        async function reloadModel(path, entry) {
+          const model = entry.reference.object;
+          if (model.isDirty()) return;
+          // Avoid redundant resolves after our own saves. A forced resolve uses
+          // VS Code's version checks to preserve edits made during the read.
+          const contents = await workspace.read(path);
+          if (model.isDirty() || model.textEditorModel.getValue() === contents)
+            return;
+          entry.reloading = true;
+          try {
+            await model.resolve({ forceReadFromFile: true });
+          } finally {
+            entry.reloading = false;
+            if (model.isDirty()) scheduleSave();
+          }
+        }
+        async function openFileNow(path) {
+          if (!path) return;
+          const previous = models.get(activePath);
+          if (previous) previous.viewState = editor.saveViewState();
+          let entry = models.get(path);
+          if (!entry) {
+            const reference = await monaco.editor.createModelReference(
+              URI.file(`/workspace/${path}`),
+            );
+            entry = { reference, missing: false, reloading: false };
+            models.set(path, entry);
+            entry.listener =
+              reference.object.textEditorModel.onDidChangeContent(() => {
+                drawTabs();
+                if (!entry.reloading && !entry.missing) scheduleSave();
+              });
+          } else if (!entry.missing) {
+            await reloadModel(path, entry);
+          }
+          activePath = path;
+          editor.setModel(entry.reference.object.textEditorModel);
+          if (entry.viewState) editor.restoreViewState(entry.viewState);
+          drawTabs();
+          drawFiles();
+          editor.focus();
+        }
+        const openFile = (path) => fileOperation(() => openFileNow(path));
+        async function refreshFilesNow() {
+          filePaths = await workspace.list();
+          const existing = new Set(filePaths);
+          for (const [path, entry] of models) {
+            if (!existing.has(path)) {
+              // A program may delete a file while the user edits it. Keep its
+              // unsaved model until the user restores it with Save or closes it.
+              if (entry.reference.object.isDirty()) entry.missing = true;
+              else disposeModel(path);
+            } else {
+              entry.missing = false;
+              await reloadModel(path, entry);
+            }
+          }
+          if (!activePath && models.size)
+            await openFileNow(models.keys().next().value);
+          drawFiles();
+          drawTabs();
+        }
+        const refreshFiles = () => fileOperation(refreshFilesNow);
+        async function saveModelsNow(restoreDeleted = false) {
+          clearTimeout(saveTimer);
+          const existing = new Set(await workspace.list());
+          for (const [path, entry] of models) {
+            const model = entry.reference.object;
+            if (!model.isDirty()) continue;
+            entry.missing = !existing.has(path);
+            if (entry.missing && !restoreDeleted) {
+              throw new Error(
+                `${path} was deleted with unsaved edits. Press Ctrl+S to restore it, or close its tab to discard those edits.`,
+              );
+            }
+            if (entry.missing) await ensureParents(path);
+            // save() can finish with a newer edit still dirty; GHCi must see
+            // those edits too before it receives the next command.
+            while (model.isDirty()) {
+              const version = model.textEditorModel.getVersionId();
+              const saved = await model.save();
+              if (!saved && model.textEditorModel.getVersionId() === version) {
+                throw new Error(`Could not save ${path}`);
+              }
+            }
+            entry.missing = false;
+          }
+          await workspace.flush();
+          drawTabs();
+        }
+        function saveAll({ restoreDeleted = false } = {}) {
+          return fileOperation(async () => {
+            await saveModelsNow(restoreDeleted);
+            await refreshFilesNow();
+          });
+        }
+        async function withEditorLocked(operation) {
+          editor.updateOptions({ readOnly: true });
+          try {
+            return await operation();
+          } finally {
+            editor.updateOptions({ readOnly: false });
+          }
+        }
+        function closeFile(path) {
+          return fileOperation(() =>
+            withEditorLocked(async () => {
+              const entry = models.get(path);
+              if (!entry) return;
+              if (entry.reference.object.isDirty()) {
+                if (entry.missing) {
+                  if (
+                    !confirm(
+                      `${path} was deleted. Discard its unsaved edits and close the tab?`,
+                    )
+                  )
+                    return;
+                  await entry.reference.object.revert({ soft: true });
+                } else {
+                  await saveModelsNow();
+                }
+              }
+              disposeModel(path);
+              await refreshFilesNow();
+            }),
+          );
+        }
+        workspace.provider.onDidChangeFile(() => {
+          refreshFiles().catch(report);
+        });
+        if (!(await workspace.list()).length) {
+          await workspace.write(
+            "Main.hs",
+            'module Main where\n\nmain :: IO ()\nmain = putStrLn "Hello, Haskell!"\n',
+          );
+        }
+        await refreshFiles();
+        await openFile(
+          filePaths.includes("Main.hs") ? "Main.hs" : filePaths[0],
+        );
+        async function ensureParents(path) {
+          // Validate before creating any directory, including a rename target.
+          const parts = path.split("/");
+          if (
+            parts.some((part) => !part || part === "." || part === "..") ||
+            /[\\\0]/.test(path)
+          ) {
+            throw new Error(
+              "Use a relative workspace path without empty, . or .. components.",
+            );
+          }
+          for (let i = 1; i < parts.length; ++i)
+            await workspace.mkdir(parts.slice(0, i).join("/"));
+        }
+        document.getElementById("new-file").onclick = action(() =>
+          fileOperation(async () => {
+            const path = prompt("New file path, for example Lib/Greeting.hs");
+            if (!path) return;
+            await ensureParents(path);
+            await workspace.provider.writeFile(
+              URI.file(`/workspace/${path}`),
+              new Uint8Array(),
+              { create: true, overwrite: false },
+            );
+            await openFileNow(path);
+            await refreshFilesNow();
+          }),
+        );
+        document.getElementById("rename-file").onclick = action(() =>
+          fileOperation(() =>
+            withEditorLocked(async () => {
+              const sourcePath = activePath;
+              if (!sourcePath) return;
+              const path = prompt("Rename file", sourcePath);
+              if (!path || path === sourcePath) return;
+              await saveModelsNow();
+              await ensureParents(path);
+              const viewState = editor.saveViewState();
+              await workspace.rename(sourcePath, path);
+              // Provider notifications are queued behind this operation, so they
+              // cannot clear activePath before the destination model is opened.
+              disposeModel(sourcePath);
+              await openFileNow(path);
+              editor.restoreViewState(viewState);
+              await refreshFilesNow();
+            }),
+          ),
+        );
+        document.getElementById("delete-file").onclick = action(() =>
+          fileOperation(() =>
+            withEditorLocked(async () => {
+              const path = activePath;
+              if (!path || !confirm(`Delete ${path}?`)) return;
+              // Finish pending saves before removing the file and its reference;
+              // an autosave must never recreate a file just deleted by the user.
+              await saveModelsNow();
+              await workspace.remove(path);
+              disposeModel(path);
+              await refreshFilesNow();
+            }),
+          ),
+        );
+        editor.addCommand(
+          monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+          action(() => saveAll({ restoreDeleted: true })),
+        );
+        window.addEventListener("beforeunload", (event) => {
+          if (
+            workspace.hasPendingWrites() ||
+            [...models.values()].some(({ reference }) =>
+              reference.object.isDirty(),
+            )
+          ) {
+            event.preventDefault();
+            event.returnValue = "";
+          }
+        });
+
+        // Line editing belongs to xterm; GHCi and interpreted getLine consume
+        // the same UTF-8 byte queue through the custom Haskell Handle device.
+        let input = new Uint8Array();
+        let wake;
+        let eof = false;
+        let line = "";
+        let cursor = 0;
+        let waiting = false;
+        let dyld;
+        const history = [];
+        let historyIndex = 0;
+        let submitted = Promise.resolve();
+        function consume(count) {
+          const bytes = input.slice(0, count);
+          input = input.slice(bytes.length);
+          return bytes;
+        }
+        function enqueue(text) {
+          const bytes = new TextEncoder().encode(text);
+          const joined = new Uint8Array(input.length + bytes.length);
+          joined.set(input);
+          joined.set(bytes, input.length);
+          input = joined;
+          wake?.();
+        }
+        function redraw(previous, oldCursor) {
+          // Repaint only the editable suffix, preserving the GHCi/program prompt.
+          terminal.write(
+            "\b".repeat(stringWidth(previous.slice(0, oldCursor))) +
+              " ".repeat(stringWidth(previous)) +
+              "\b".repeat(stringWidth(previous)) +
+              line +
+              "\b".repeat(stringWidth(line.slice(cursor))),
+          );
+        }
+        function replaceLine(next) {
+          const previous = line,
+            oldCursor = cursor;
+          line = next;
+          cursor = line.length;
+          redraw(previous, oldCursor);
+        }
+        terminal.onData((data) => {
+          if (data === "\x1b[A") {
+            if (historyIndex > 0) replaceLine(history[--historyIndex]);
+            return;
+          }
+          if (data === "\x1b[B") {
+            if (historyIndex < history.length)
+              replaceLine(history[++historyIndex] || "");
+            return;
+          }
+          if (data === "\x1b[D") {
+            if (cursor) {
+              const char = [...line.slice(0, cursor)].at(-1);
+              cursor -= char.length;
+              terminal.write(`\x1b[${Math.max(1, stringWidth(char))}D`);
+            }
+            return;
+          }
+          if (data === "\x1b[C") {
+            if (cursor < line.length) {
+              const char = [...line.slice(cursor)][0];
+              cursor += char.length;
+              terminal.write(`\x1b[${Math.max(1, stringWidth(char))}C`);
+            }
+            return;
+          }
+          if (data.startsWith("\x1b")) return;
+          for (const char of data.replace(/\r\n/g, "\n")) {
+            if (char === "\r" || char === "\n") {
+              terminal.write("\r\n");
+              if (line) history.push(line);
+              historyIndex = history.length;
+              const command = line;
+              line = "";
+              cursor = 0;
+              // Save all dirty editors before a queued GHCi command can read them.
+              submitted = submitted
+                .catch(() => {})
+                .then(async () => {
+                  await saveAll();
+                  enqueue(command + "\n");
+                });
+              submitted.catch(report);
+            } else if (char === "\x03") {
+              replaceLine("");
+              terminal.write("^C\r\n");
+              if (waiting) enqueue("\n");
+              else dyld?.exportFuncs.interrupt?.().catch(report);
+            } else if (char === "\x04") {
+              if (!line) {
+                eof = true;
+                wake?.();
+              } else {
+                enqueue(line);
+                line = "";
+                cursor = 0;
+              }
+            } else if (char === "\x7f" || char === "\b") {
+              if (cursor) {
+                const previous = line,
+                  oldCursor = cursor;
+                const char = [...line.slice(0, cursor)].at(-1);
+                line = line.slice(0, cursor - char.length) + line.slice(cursor);
+                cursor -= char.length;
+                redraw(previous, oldCursor);
+              }
+            } else if (char === "\x15") {
+              replaceLine("");
+            } else if (char >= " " || char === "\t") {
+              const previous = line,
+                oldCursor = cursor;
+              line = line.slice(0, cursor) + char + line.slice(cursor);
+              cursor += char.length;
+              if (oldCursor === previous.length) terminal.write(char);
+              else redraw(previous, oldCursor);
+            }
+          }
+        });
+        window.playgroundTerminal = {
+          readCount: 0,
+          async read(count) {
+            await workspace.flush();
+            await refreshFiles();
+            await new Promise((resolve) => terminal.write("", resolve));
+            ++this.readCount;
+            waiting = true;
+            status.textContent = "GHCi ready";
+            delete status.dataset.error;
+            if (!input.length && !eof)
+              await new Promise((resolve) => {
+                wake = resolve;
+              });
+            wake = undefined;
+            waiting = false;
+            status.textContent = "GHCi running";
+            return consume(count);
+          },
+          readNonBlocking(count) {
+            return input.length
+              ? consume(count)
+              : eof
+                ? null
+                : new Uint8Array();
+          },
+          ready() {
+            return input.length > 0 || eof;
+          },
+          write(bytes) {
+            terminal.write(bytes);
+          },
+        };
+        window.playground = { editor, workspace, terminal, openFile, saveAll };
+        document.getElementById("load-file").onclick = action(async () => {
+          if (activePath)
+            terminal.paste(`:load ${JSON.stringify(`/workspace/${activePath}`)}\n`);
+          terminal.focus();
+        });
+        document.getElementById("reload").onclick = () => {
+          terminal.paste(":reload\n");
+          terminal.focus();
+        };
+        status.textContent = "Loading GHCi…";
+        const unpacker = new wasi.WASI(
+          ["bsdtar.wasm", "-x"],
+          [],
+          [
+            new wasi.OpenFile(
+              new wasi.File(new Uint8Array(), { readonly: true }),
+            ),
+            wasi.ConsoleStdout.lineBuffered(console.info),
+            wasi.ConsoleStdout.lineBuffered(console.warn),
+            rootfs,
+          ],
+          { debug: false },
+        );
+        async function checkedFetch(url) {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`${response.status}: ${url}`);
+          return response;
+        }
+        const [{ instance }, archive] = await Promise.all([
+          WebAssembly.instantiateStreaming(
+            checkedFetch(
+              "https://haskell-wasm.github.io/bsdtar-wasm/bsdtar.wasm",
+            ),
+            { wasi_snapshot_preview1: unpacker.wasiImport },
+          ),
+          checkedFetch("./rootfs.tar.zst").then((response) =>
+            response.arrayBuffer(),
+          ),
+        ]);
+        unpacker.fds[0] = new wasi.OpenFile(
+          new wasi.File(new Uint8Array(archive), { readonly: true }),
+        );
+        if (unpacker.start(instance) !== 0)
+          throw new Error("Could not unpack the GHC runtime");
+        const host = new DyLDBrowserHost({
+          rootfs,
+          stdout: (message) => terminal.writeln(message),
+          stderr: (message) => terminal.writeln(message),
+        });
+        const fetchLibrary = host.fetchWasm.bind(host);
+        host.fetchWasm = (path) =>
+          path.startsWith("/workspace/")
+            ? workspace
+                .readBytes(path)
+                .then(
+                  (bytes) =>
+                    new Response(bytes, {
+                      headers: { "Content-Type": "application/wasm" },
+                    }),
+                )
+            : fetchLibrary(path);
+        dyld = await main({
+          rpc: host,
+          searchDirs: [
+            "/tmp/clib",
+            "/tmp/hslib/lib/wasm32-wasi-ghc-9.15.20251024",
+          ],
+          mainSoPath: "/tmp/libplayground001.so",
+          args: ["libplayground001.so", "+RTS", "-c", "-RTS"],
+          isIserv: false,
+        });
+        terminal.focus();
+        await dyld.exportFuncs.myMain("/tmp/hslib/lib", "/workspace");
+        await workspace.flush();
+        await refreshFiles();
+        status.textContent =
+          "GHCi exited. Reload this page to start another session.";
+      } catch (error) {
+        report(error);
+      }
+    </script>
   </body>
 </html>

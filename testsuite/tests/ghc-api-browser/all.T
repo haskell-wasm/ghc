@@ -32,6 +32,8 @@ setTestOpts(
 test(
   "playground001",
   [
+    # CDN startup, several GHCi sessions and OPFS reloads are heavyweight.
+    run_timeout_multiplier(6),
     # pretty heavyweight, just test one browser for now.
     unless("FIREFOX_LAUNCH_OPTS" in ghc_env, skip),
     extra_files(
