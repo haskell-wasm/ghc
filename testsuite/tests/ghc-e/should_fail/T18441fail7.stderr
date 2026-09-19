@@ -8,7 +8,7 @@ While handling ghc-10.1-inplace:GHC.Utils.Panic.GhcException:
   |
   | HasCallStack backtrace:
   |   throw, called at compiler/GHC/Utils/Panic.hs:180:21 in ghc-10.1-inplace:GHC.Utils.Panic
-  |   throwGhcException, called at ghc/GHCi/UI.hs:2851:21 in ghc-bin-10.1.20260801-inplace:GHCi.UI
+  |   throwGhcException, called at compiler/GHCi/UI.hs:2851:21 in ghc-10.1-inplace:GHCi.UI
 
 HasCallStack backtrace:
   throwIO, called at compiler/GHC/Utils/Error.hs:513:19 in ghc-10.1-inplace:GHC.Utils.Error

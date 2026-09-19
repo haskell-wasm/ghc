@@ -7,5 +7,5 @@ HasCallStack backtrace:
 
 
 HasCallStack backtrace:
-  throwIO, called at ghc\GHCi\UI.hs:1655:31 in ghc-bin-10.1.20260629-inplace:GHCi.UI
+  throwIO, called at compiler\GHCi\UI.hs:1655:31 in ghc-10.1-inplace:GHCi.UI
 

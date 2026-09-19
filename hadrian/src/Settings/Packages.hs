@@ -93,6 +93,7 @@ packageArgs = do
             --    that runs on the target and can use target's own
             --    ghci object linker
             [ andM [expr (ghcWithInterpreter stage), orM [notCross, stage1]] `cabalFlag` "internal-interpreter"
+            , expr (ghcWithInterpreter stage) `cabalFlag` "ghci"
             , orM [ notM cross, haveCurses ]  `cabalFlag` "terminfo"
             , arg "-build-tool-depends"
             , flag UseLibzstd `cabalFlag` "with-libzstd"
@@ -114,8 +115,7 @@ packageArgs = do
              , compilerStageOption ghcDebugAssertions ? arg "-DDEBUG" ]
 
           , builder (Cabal Flags) ? mconcat
-            [ (expr (ghcWithInterpreter stage)) `cabalFlag` "internal-interpreter"
-            , ifM stage0
+            [ ifM stage0
                   -- We build a threaded stage 1 if the bootstrapping compiler
                   -- supports it.
                   (threadedBootstrapper `cabalFlag` "threaded")

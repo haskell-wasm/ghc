@@ -55,7 +55,7 @@ packages: ./compiler
           ./linters/**/*.cabal
 
 constraints: ghc +internal-interpreter +dynamic-system-linke,
-             ghc-bin +internal-interpreter +threaded,
+             ghc-bin +threaded,
              ghci +internal-interpreter,
              haddock +in-ghc-tree,
              haddock-api +in-ghc-tree,
