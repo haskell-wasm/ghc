@@ -9,7 +9,9 @@ export WASM_SO_OPT="--debuginfo --low-memory-unused --strip-dwarf -Oz"
 
 # we'll build a rootfs tarball that contains everything in tmp and
 # extracts to /tmp, mapped from here
-mkdir ./tmp
+PLAYGROUND_TMP=$(mktemp -d)
+trap 'rm -rf "$PLAYGROUND_TMP"' EXIT
+mkdir "$PLAYGROUND_TMP/tmp"
 
 $TEST_HC \
   -v0 \
@@ -17,25 +19,48 @@ $TEST_HC \
   -shared -dynamic \
   -no-keep-hi-files -no-keep-o-files \
   -O2 \
-  playground001.hs -o ./tmp/libplayground001.so
-rm -f ./*_stub.h ./playground001.hs
+  playground001.hs -o "$PLAYGROUND_TMP/tmp/libplayground001.so"
+rm -f ./playground001_stub.h
 
 # /tmp/clib contains libc/libc++ .so files
-cp -r "$(dirname "$TEST_CC")/../share/wasi-sysroot/lib/wasm32-wasi" ./tmp/clib
+cp -r "$(dirname "$TEST_CC")/../share/wasi-sysroot/lib/wasm32-wasi" "$PLAYGROUND_TMP/tmp/clib"
 # trim unneeded stuff in c libdir
-find ./tmp/clib -type f ! -name "*.so" -delete
+find "$PLAYGROUND_TMP/tmp/clib" -type f ! -name "*.so" -delete
 rm -f \
-  ./tmp/clib/libsetjmp.so \
-  ./tmp/clib/libwasi-emulated-*.so
+  "$PLAYGROUND_TMP/tmp/clib"/libsetjmp.so \
+  "$PLAYGROUND_TMP/tmp/clib"/libwasi-emulated-*.so
 
 # /tmp/hslib/lib is the ghc libdir
-mkdir ./tmp/hslib
-cp -r "$($TEST_HC --print-libdir)" ./tmp/hslib/lib
+mkdir "$PLAYGROUND_TMP/tmp/hslib"
+cp -r "$($TEST_HC --print-libdir)" "$PLAYGROUND_TMP/tmp/hslib/lib"
 # unregister Cabal/Cabal-syntax, too big
-$GHC_PKG --no-user-package-db --global-package-db=./tmp/hslib/lib/package.conf.d unregister Cabal Cabal-syntax
-$GHC_PKG --no-user-package-db --global-package-db=./tmp/hslib/lib/package.conf.d recache
+$GHC_PKG --no-user-package-db --global-package-db="$PLAYGROUND_TMP/tmp/hslib/lib"/package.conf.d unregister Cabal Cabal-syntax
+for PLAYGROUND_CXX_CONF in "$PLAYGROUND_TMP/tmp/hslib/lib"/package.conf.d/system-cxx-std-lib-*.conf; do
+  [[ -f "$PLAYGROUND_CXX_CONF" ]] || continue
+  awk '
+    /^[^[:space:]]/ { skip = 0 }
+    /^(library-dirs|dynamic-library-dirs|library-dirs-static):/ {
+      print $1 " ${pkgroot}/../../clib"
+      skip = 1
+      next
+    }
+    !skip { print }
+  ' "$PLAYGROUND_CXX_CONF" > "$PLAYGROUND_CXX_CONF.tmp"
+  mv "$PLAYGROUND_CXX_CONF.tmp" "$PLAYGROUND_CXX_CONF"
+done
+for PLAYGROUND_CONF in "$PLAYGROUND_TMP/tmp/hslib/lib"/package.conf.d/*.conf; do
+  awk '
+    /^(library-dirs|dynamic-library-dirs|library-dirs-static):/ && !/\$\{pkgroot\}\/\.\.\/\.\.\/clib/ {
+      print $0 " ${pkgroot}/../../clib"
+      next
+    }
+    { print }
+  ' "$PLAYGROUND_CONF" > "$PLAYGROUND_CONF.tmp"
+  mv "$PLAYGROUND_CONF.tmp" "$PLAYGROUND_CONF"
+done
+$GHC_PKG --no-user-package-db --global-package-db="$PLAYGROUND_TMP/tmp/hslib/lib"/package.conf.d recache
 # we only need non-profiling .dyn_hi/.so, trim as much as we can
-find ./tmp/hslib/lib "(" \
+find "$PLAYGROUND_TMP/tmp/hslib/lib" "(" \
   -name "*.hi" \
   -o -name "*.a" \
   -o -name "*.p_hi" \
@@ -45,32 +70,20 @@ find ./tmp/hslib/lib "(" \
   -o -name "libHSrts*_debug*.so" \
   ")" -delete
 rm -rf \
-  ./tmp/hslib/lib/doc \
-  ./tmp/hslib/lib/html \
-  ./tmp/hslib/lib/latex \
-  ./tmp/hslib/lib/*.mjs \
-  ./tmp/hslib/lib/*.js \
-  ./tmp/hslib/lib/*.txt
-# HS_SEARCHDIR is something like
-# /tmp/hslib/lib/wasm32-wasi-ghc-9.15.20251024 which is the
-# dynamic-library-dirs that contains all libHS*.so in one place, and
-# also static libraries in per-unit directories
-HS_SEARCHDIR=$(find ./tmp/hslib/lib -type f -name "*.so" -print0 | xargs -0 -n1 dirname | sort -u | sed "s|^\./|/|")
-# hunt down the remaining bits of Cabal/Cabal-syntax. too bad there's
-# no ghc-pkg uninstall.
-rm -rf ."$HS_SEARCHDIR"/*Cabal*
-
-# fix the hard coded search dir in index.html
-SED_IS_GNU=$(sed --version &> /dev/null && echo 1 || echo 0)
-if [[ $SED_IS_GNU == "1" ]]; then
-  sed -i "s|/tmp/hslib/lib/wasm32-wasi-ghc-9.15.20251024|$HS_SEARCHDIR|" ./index.html
-else
-  sed -i "" "s|/tmp/hslib/lib/wasm32-wasi-ghc-9.15.20251024|$HS_SEARCHDIR|" ./index.html
-fi
+  "$PLAYGROUND_TMP/tmp/hslib/lib"/doc \
+  "$PLAYGROUND_TMP/tmp/hslib/lib"/html \
+  "$PLAYGROUND_TMP/tmp/hslib/lib"/latex \
+  "$PLAYGROUND_TMP/tmp/hslib/lib"/*.mjs \
+  "$PLAYGROUND_TMP/tmp/hslib/lib"/*.js \
+  "$PLAYGROUND_TMP/tmp/hslib/lib"/*.txt
+rm -rf "$PLAYGROUND_TMP"/tmp/hslib/lib/wasm32-wasi-ghc-*/*Cabal*
 
 # also set ZSTD_NBTHREADS/ZSTD_CLEVEL when building for production
-tar -cf ./rootfs.tar.zst --zstd tmp
-rm -rf ./tmp
+tar -C "$PLAYGROUND_TMP" -cf "$PWD/rootfs.tar.zst" --zstd tmp
+rm -rf "$PLAYGROUND_TMP"
+trap - EXIT
 
 # pass puppeteer.launch() opts as json
-exec ./playground001.js "$1"
+if [[ $# -gt 0 ]]; then
+  exec ./playground001.js "$1"
+fi

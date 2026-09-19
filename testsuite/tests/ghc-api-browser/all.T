@@ -43,6 +43,7 @@ test(
         "index.html",
         "playground001.hs",
         "playground001.js",
+        "playground001-opfs.js",
         "playground001.sh",
       ]
     ),

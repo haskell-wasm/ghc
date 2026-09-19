@@ -382,11 +382,15 @@ export class DyLDHost {
 export class DyLDBrowserHost {
   // Deduped absolute paths of directories where we lookup .so files
   #rpaths = new Set();
+  #shouldConsumeFile;
   // The PreopenDirectory object of the root filesystem
   rootfs;
   // Continuations to output a single line to stdout/stderr
   stdout;
   stderr;
+  stdinFd;
+  stdoutFd;
+  stderrFd;
 
   // Given canonicalized absolute file path, returns the File object,
   // or null if absent
@@ -398,12 +402,19 @@ export class DyLDBrowserHost {
     return ret === 0 ? entry : null;
   }
 
-  constructor({ rootfs, stdout, stderr }) {
+  constructor({
+    rootfs, stdout, stderr, stdinFd, stdoutFd, stderrFd,
+    shouldConsumeFile = () => true,
+  }) {
     this.rootfs = rootfs
       ? rootfs
       : new wasi.PreopenDirectory("/", [["tmp", new wasi.Directory([])]]);
     this.stdout = stdout ? stdout : (msg) => console.info(msg);
     this.stderr = stderr ? stderr : (msg) => console.warn(msg);
+    this.stdinFd = stdinFd;
+    this.stdoutFd = stdoutFd;
+    this.stderrFd = stderrFd;
+    this.#shouldConsumeFile = shouldConsumeFile;
   }
 
   // p must be canonicalized absolute path
@@ -438,7 +449,7 @@ export class DyLDBrowserHost {
       headers: { "Content-Type": "application/wasm" },
     });
     // It's only fetched once, take the chance to prune it in vfs to save memory
-    entry.data = new Uint8Array();
+    if (this.#shouldConsumeFile(p)) entry.data = new Uint8Array();
     return r;
   }
 }
@@ -843,11 +854,11 @@ class DyLD {
         args,
         [],
         [
-          new wasi.OpenFile(
+          this.#rpc.stdinFd ?? new wasi.OpenFile(
             new wasi.File(new Uint8Array(), { readonly: true })
           ),
-          wasi.ConsoleStdout.lineBuffered((msg) => this.#rpc.stdout(msg)),
-          wasi.ConsoleStdout.lineBuffered((msg) => this.#rpc.stderr(msg)),
+          this.#rpc.stdoutFd ?? wasi.ConsoleStdout.lineBuffered((msg) => this.#rpc.stdout(msg)),
+          this.#rpc.stderrFd ?? wasi.ConsoleStdout.lineBuffered((msg) => this.#rpc.stderr(msg)),
           // for ghci browser mode, default to an empty rootfs with
           // /tmp
           this.#rpc instanceof DyLDBrowserHost

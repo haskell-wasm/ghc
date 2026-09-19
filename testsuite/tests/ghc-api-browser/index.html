@@ -3,232 +3,1390 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ghc-in-browser</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/modern-normalize/modern-normalize.min.css"
-    />
+    <meta name="color-scheme" content="dark" />
+    <title>Haskell playground</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" />
     <style>
-      html,
-      body {
-        height: 100%;
+      :root { font-family: system-ui, sans-serif; color: #e7e9ef; background: #14161c; font-size: 13px; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      button, input { font: inherit; }
+      button { color: inherit; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 6px 9px; cursor: pointer; }
+      button:hover:enabled { background: #303440; }
+      button:disabled { opacity: .4; cursor: default; }
+      button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid #b3a0ff; outline-offset: -2px; }
+      button.primary { background: #6750b3; border-color: #806bc3; }
+      button.primary:hover:enabled { background: #7b61ca; }
+      button.danger { color: #ffb4ab; }
+      .app { height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+      .topbar { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid #30333e; background: #1b1d25; }
+      h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.2px; }
+      .mark { color: #c8b6ff; font-family: monospace; font-size: 22px; margin-right: 8px; }
+      .topbar .actions { margin-left: auto; display: flex; gap: 5px; }
+      .workbench { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 0; }
+      .sidebar { display: flex; flex-direction: column; border-right: 1px solid #30333e; background: #1b1d25; min-height: 0; }
+      .section-title { margin: 0; font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: #a9adbd; }
+      .sidebar-heading { padding: 15px 13px 8px; }
+      .file-actions { display: flex; flex-wrap: wrap; gap: 2px; padding: 0 6px 9px; border-bottom: 1px solid #30333e; }
+      .file-actions button { font-size: 12px; padding: 5px 6px; }
+      #files { flex: 1; overflow: auto; padding: 8px 0; }
+      .file-row { display: block; text-align: left; width: 100%; border-radius: 0; padding: 6px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .file-row[aria-current="true"] { color: #e3d9ff; background: #332d48; box-shadow: inset 2px 0 #b3a0ff; }
+      .file-icon { display: inline-block; width: 23px; color: #b6a0ef; font-family: monospace; }
+      details > summary { cursor: pointer; padding: 6px 12px; color: #c5c9d5; white-space: nowrap; }
+      details > summary::marker { color: #8f95a8; }
+      details > summary[aria-current="true"] { background: #332d48; }
+      details > div { padding-left: 12px; }
+      .storage-hint { margin: 0; padding: 12px; color: #8f95a8; font-size: 11px; border-top: 1px solid #30333e; }
+      .workspace { display: grid; grid-template-rows: minmax(180px, 3fr) minmax(180px, 2fr); min-height: 0; min-width: 0; }
+      .editor-pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+      #tabs { display: flex; min-height: 37px; background: #1b1d25; border-bottom: 1px solid #30333e; overflow-x: auto; }
+      .tab { display: flex; flex: 0 0 auto; align-items: center; border-right: 1px solid #30333e; border-top: 2px solid transparent; }
+      .tab.active { background: #1e1e1e; border-top-color: #b3a0ff; }
+      .tab > button:first-child { border-radius: 0; padding: 8px 8px 8px 13px; }
+      .tab .close-tab { color: #9ca3b4; padding: 3px 7px; margin-right: 3px; }
+      #editor { flex: 1; min-height: 0; }
+      #empty-editor { margin: auto; padding: 30px; color: #989eae; text-align: center; }
+      #empty-editor[hidden] { display: none; }
+      .terminal-pane { min-width: 0; display: flex; flex-direction: column; min-height: 0; border-top: 1px solid #414553; background: #171920; }
+      .terminal-heading { display: flex; align-items: center; gap: 12px; min-height: 39px; padding: 5px 12px; border-bottom: 1px solid #30333e; }
+      .terminal-heading .hint { color: #8f95a8; font-size: 12px; }
+      .terminal-heading .actions { margin-left: auto; display: flex; gap: 4px; }
+      #terminal { flex: 1; min-height: 0; padding: 9px 12px; overflow: hidden; }
+      .statusbar { min-height: 27px; display: flex; align-items: center; gap: 20px; padding: 4px 12px; background: #302841; font-size: 11px; }
+      #save-status { margin-left: auto; white-space: nowrap; }
+      #status[data-error="true"], #file-error { color: #ffb4ab; }
+      dialog { width: min(460px, calc(100vw - 32px)); background: #242731; color: #e7e9ef; padding: 22px; border: 1px solid #494253; border-radius: 8px; box-shadow: 0 16px 60px #0009; }
+      dialog::backdrop { background: #090b11aa; }
+      dialog h2 { margin: 0 0 15px; font-size: 17px; }
+      dialog p { line-height: 1.5; overflow-wrap: anywhere; }
+      dialog input { display: block; width: 100%; margin-top: 7px; padding: 9px; color: inherit; background: #171920; border: 1px solid #636074; border-radius: 4px; }
+      dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+      #file-error { min-height: 18px; margin: 9px 0 0; font-size: 12px; }
+      @media (max-width: 720px) {
+        .workbench { grid-template-columns: 155px minmax(0, 1fr); }
+        .topbar { padding: 8px; gap: 6px; }
+        .topbar .actions { gap: 0; }
+        h1 { font-size: 13px; }
+        .mark { display: none; }
+        .terminal-heading .hint { display: none; }
+        .workspace { grid-template-rows: minmax(160px, 1fr) minmax(160px, 1fr); }
+        #terminal { padding: 7px; }
       }
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: #0f172a;
-        color: #e5e7eb;
-      }
-      .app {
-        height: 100vh;
-        display: grid;
-        gap: 0.5rem;
-        padding: 0.5rem;
-      }
-      @media (min-width: 800px) {
-        .app {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
-      @media (max-width: 799.98px) {
-        .app {
-          grid-template-rows: 1fr 1fr;
-        }
-      }
-      .pane {
-        background: #111827;
-        border: 1px solid #1f2937;
-        border-radius: 12px;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-      }
-      header {
-        padding: 0.5rem 0.75rem;
-        border-bottom: 1px solid #1f2937;
-        font-weight: 600;
-      }
-      #editor {
-        flex: 1;
-        min-height: 0;
-      }
-      .right {
-        padding: 0.6rem;
-        gap: 0.6rem;
-      }
-      .controls {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        margin-bottom: 0.4rem;
-      }
-      .controls input[type="text"] {
-        flex: 1;
-        min-width: 200px;
-        background: #0b1020;
-        color: #e5e7eb;
-        border: 1px solid #223;
-        border-radius: 8px;
-        padding: 0.55rem;
-      }
-      .controls button {
-        background: #22c55e;
-        border: none;
-        border-radius: 8px;
-        padding: 0.55rem 0.85rem;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .outputs {
-        display: block;
-      }
-      .outputs .label {
-        font-size: 0.85rem;
-        opacity: 0.8;
-        margin: 0.35rem 0;
-      }
-      .outputs textarea {
-        display: block;
-        width: 100%;
-        min-height: 30vh;
-        background: #0b1020;
-        color: #d1fae5;
-        border: 1px solid #223;
-        border-radius: 8px;
-        padding: 0.6rem;
-        resize: vertical;
-      }
-      .stderr {
-        color: #fee2e2;
+      @media (max-width: 480px) {
+        .workbench { grid-template-columns: 112px minmax(0, 1fr); }
+        .file-actions button { font-size: 11px; padding: 4px; }
+        .topbar button { font-size: 11px; padding: 6px; }
+        .statusbar { gap: 8px; }
+        .terminal-heading { padding: 5px 6px; gap: 4px; }
+        .terminal-heading button { padding: 5px 4px; font-size: 11px; }
+        .terminal-heading .actions { gap: 0; }
       }
     </style>
-
-    <script async type="module">
-      import * as monaco from "https://cdn.jsdelivr.net/npm/monaco-editor/+esm";
-      import {
-        ConsoleStdout,
-        File,
-        OpenFile,
-        PreopenDirectory,
-        WASI,
-      } from "https://esm.sh/gh/haskell-wasm/browser_wasi_shim";
-      import { DyLDBrowserHost, main } from "./dyld.mjs";
-
-      const rootfs = new PreopenDirectory("/", []);
-
-      const bsdtar_wasi = new WASI(
-        ["bsdtar.wasm", "-x"],
-        [],
-        [
-          new OpenFile(new File(new Uint8Array(), { readonly: true })),
-          ConsoleStdout.lineBuffered((msg) => console.info(msg)),
-          ConsoleStdout.lineBuffered((msg) => console.warn(msg)),
-          rootfs,
-        ],
-        { debug: false }
-      );
-
-      const [{ instance }, rootfs_bytes] = await Promise.all([
-        WebAssembly.instantiateStreaming(
-          fetch("https://haskell-wasm.github.io/bsdtar-wasm/bsdtar.wasm"),
-          { wasi_snapshot_preview1: bsdtar_wasi.wasiImport }
-        ),
-        fetch("./rootfs.tar.zst").then((r) => r.bytes()),
-      ]);
-
-      bsdtar_wasi.fds[0] = new OpenFile(
-        new File(rootfs_bytes, { readonly: true })
-      );
-      bsdtar_wasi.start(instance);
-
-      if (document.readyState === "loading") {
-        await new Promise((res) =>
-          document.addEventListener("DOMContentLoaded", res, { once: true })
-        );
-      }
-
-      window.editor = monaco.editor.create(document.getElementById("editor"), {
-        value: 'main :: IO ()\nmain = putStrLn "Hello, Haskell!"\n',
-        language: "haskell",
-        automaticLayout: true,
-        minimap: { enabled: false },
-        theme: "vs-dark",
-        fontSize: 14,
-      });
-
-      const dyld = await main({
-        rpc: new DyLDBrowserHost({
-          rootfs,
-          stdout: (msg) => {
-            document.getElementById("stdout").value += `${msg}\n`;
-          },
-          stderr: (msg) => {
-            document.getElementById("stderr").value += `${msg}\n`;
-          },
-        }),
-        searchDirs: [
-          "/tmp/clib",
-          "/tmp/hslib/lib/wasm32-wasi-ghc-9.15.20251024",
-        ],
-        mainSoPath: "/tmp/libplayground001.so",
-        args: ["libplayground001.so", "+RTS", "-c", "-RTS"],
-        isIserv: false,
-      });
-      const main_func = await dyld.exportFuncs.myMain("/tmp/hslib/lib");
-
-      document.getElementById("runBtn").addEventListener("click", async () => {
-        document.getElementById("runBtn").disabled = true;
-
-        try {
-          document.getElementById("stdout").value = "";
-          document.getElementById("stderr").value = "";
-
-          await main_func(
-            document.getElementById("ghcArgs").value,
-            editor.getValue()
+    <script>
+      window.esmsInitOptions = {
+        shimMode: true,
+        resolve(id, parent, resolve) {
+          const match = /^(@codingame\/monaco-vscode-[^/]+)(?:\/(.*))?$/.exec(id);
+          if (!match) return resolve(id, parent);
+          let path = match[2];
+          if (match[1] === "@codingame/monaco-vscode-api") {
+            path = path?.startsWith("vscode/") ? "vscode/src/" + path.slice(7) : path || "services";
+          } else if (match[1] === "@codingame/monaco-vscode-editor-api") {
+            path ||= "esm/vs/editor/editor.api";
+          } else {
+            path ||= "index";
+          }
+          if (!/\.(js|css|json)$/.test(path)) path += ".js";
+          return `https://cdn.jsdelivr.net/npm/${match[1]}@37.0.0/${path}`;
+        },
+        async fetch(url, options) {
+          const response = await fetch(url, options);
+          if (!response.ok || !url.endsWith(".css")) return response;
+          const css = (await response.text()).replace(
+            /url\((['"]?)([^)'"\s]+)\1\)/g,
+            (_, quote, path) => `url("${new URL(path, url).href}")`
           );
-        } finally {
-          document.getElementById("runBtn").disabled = false;
+          return new Response(`export default ${JSON.stringify(css)}`, {
+            headers: { "Content-Type": "text/javascript" },
+          });
+        },
+        onerror(error) {
+          const status = document.getElementById("status");
+          if (status) {
+            status.textContent = error.message;
+            status.dataset.error = "true";
+          }
+          console.error(error);
+        },
+      };
+    </script>
+    <script async src="https://cdn.jsdelivr.net/npm/es-module-shims@2.8.4/dist/es-module-shims.js"></script>
+    <script type="importmap-shim">
+      {
+        "imports": {
+          "marked": "https://cdn.jsdelivr.net/npm/marked@14.0.0/+esm",
+          "dompurify": "https://cdn.jsdelivr.net/npm/dompurify@3.4.15/+esm",
+          "jschardet": "https://cdn.jsdelivr.net/npm/jschardet@3.1.4/+esm",
+          "@vscode/iconv-lite-umd": "https://cdn.jsdelivr.net/npm/@vscode/iconv-lite-umd@0.7.1/+esm",
+          "@vscode/diff": "https://cdn.jsdelivr.net/npm/@vscode/diff@0.0.2-7/+esm"
         }
-      });
-
-      document.getElementById("runBtn").disabled = false;
+      }
     </script>
   </head>
   <body>
     <div class="app">
-      <section class="pane">
-        <header>Haskell Source</header>
-        <div id="editor"></div>
-      </section>
-
-      <section class="pane right">
-        <header>Controls / Output</header>
-        <div class="controls">
-          <input
-            id="ghcArgs"
-            type="text"
-            placeholder="GHC args"
-            style="font-family: ui-monospace, Menlo, Consolas, monospace"
-          />
-          <button id="runBtn" disabled="true">Run</button>
+      <header class="topbar">
+        <h1><span class="mark" aria-hidden="true">λ&gt;</span>Haskell playground</h1>
+        <div class="actions">
+          <button id="save-all" disabled title="Save all files (Ctrl+S)">Save all</button>
+          <button id="load-file" class="primary" disabled title="Save files and load the current file into GHCi">Load in GHCi</button>
         </div>
-        <div class="outputs">
-          <div class="label">stdout</div>
-          <textarea
-            id="stdout"
-            readonly
-            style="font-family: ui-monospace, Menlo, Consolas, monospace"
-          ></textarea>
-          <div class="label">stderr</div>
-          <textarea
-            id="stderr"
-            class="stderr"
-            readonly
-            style="font-family: ui-monospace, Menlo, Consolas, monospace"
-          ></textarea>
+      </header>
+      <main class="workbench">
+        <aside class="sidebar" aria-label="Workspace files">
+          <div class="sidebar-heading"><h2 class="section-title">Explorer</h2></div>
+          <div class="file-actions">
+            <button id="new-file" disabled>New file</button>
+            <button id="new-folder" disabled>New folder</button>
+            <button id="rename-file" disabled>Rename</button>
+            <button id="delete-file" class="danger" disabled>Delete</button>
+          </div>
+          <nav id="files" aria-label="Files"></nav>
+          <p class="storage-hint">Files stay in this browser.</p>
+        </aside>
+        <div class="workspace">
+          <section class="editor-pane" aria-label="Source editor">
+            <div id="tabs" role="tablist" aria-label="Open files"></div>
+            <div id="empty-editor" hidden>Create a file to get started.</div>
+            <div id="editor"></div>
+          </section>
+          <section class="terminal-pane" aria-label="GHCi terminal">
+            <div class="terminal-heading">
+              <h2 class="section-title">GHCi</h2>
+              <span class="hint">:help for commands</span>
+              <div class="actions">
+                <button id="reload" disabled title="Save files and reload GHCi modules">Reload</button>
+                <button id="interrupt" disabled title="Interrupt GHCi (Ctrl+C)">Interrupt</button>
+                <button id="restart" disabled title="Restart GHCi">Restart</button>
+                <button id="clear-terminal" title="Clear terminal display">Clear</button>
+              </div>
+            </div>
+            <div id="terminal" aria-label="Interactive GHCi terminal"></div>
+          </section>
         </div>
-      </section>
+      </main>
+      <footer class="statusbar" role="status">
+        <span id="status">Loading editor…</span>
+        <span id="save-status"></span>
+      </footer>
     </div>
+    <dialog id="file-dialog" aria-labelledby="file-dialog-title">
+      <form id="file-form">
+        <h2 id="file-dialog-title"></h2>
+        <p id="file-dialog-description" hidden></p>
+        <label id="file-name-label">Path in workspace<input id="file-name" autocomplete="off" spellcheck="false" required /></label>
+        <p id="file-error" role="alert"></p>
+        <div class="actions">
+          <button type="button" id="cancel-file">Cancel</button>
+          <button type="submit" id="confirm-file" class="primary">Create</button>
+        </div>
+      </form>
+    </dialog>
+    <script id="runtime-worker" type="text/plain">
+import { Directory, File, OpenDirectory, OpenFile, wasi, WASI, ConsoleStdout, PreopenDirectory } from "https://esm.sh/gh/haskell-wasm/browser_wasi_shim";
+
+const encoder = new TextEncoder(), decoder = new TextDecoder();
+const ROOT = "/workspace", MAGIC = 0x47574331, COMMIT = 0x434f4d31;
+const errorNames = { 20: "EntryExists", 28: "Unknown", 31: "FileIsADirectory", 44: "EntryNotFound", 51: "Unknown", 54: "FileNotADirectory", 55: "Unknown", 63: "Unavailable", 75: "Unavailable", 76: "NoPermissions" };
+function fail(errno, message) {
+  const error = new Error(message);
+  error.errno = errno;
+  error.code = errorNames[errno] ?? "Unknown";
+  throw error;
+}
+function errno(error) {
+  return error.errno ?? (error.name === "QuotaExceededError" ? wasi.ERRNO_NOSPC : error instanceof RangeError ? wasi.ERRNO_NOMEM : wasi.ERRNO_IO);
+}
+function canonical(path, base = ROOT) {
+  if (typeof path !== "string" || path.includes("\0")) fail(wasi.ERRNO_INVAL, "Invalid path");
+  if (path.startsWith("/") && path !== ROOT && !path.startsWith(ROOT + "/")) fail(wasi.ERRNO_NOTCAPABLE, "Path is outside the workspace");
+  const parts = path.startsWith("/") ? [] : base.slice(ROOT.length).split("/").filter(Boolean);
+  for (const part of (path.startsWith("/") ? path.slice(ROOT.length) : path).split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (!parts.length) fail(wasi.ERRNO_NOTCAPABLE, "Path is outside the workspace");
+      parts.pop();
+    } else parts.push(part);
+  }
+  return ROOT + (parts.length ? "/" + parts.join("/") : "");
+}
+function checksum(bytes) {
+  let hash = 2166136261;
+  for (const byte of bytes) hash = Math.imul(hash ^ byte, 16777619);
+  return hash >>> 0;
+}
+function validSize(size) {
+  const value = Number(size);
+  if (!Number.isSafeInteger(value) || value < 0) fail(wasi.ERRNO_FBIG, "File is too large");
+  return value;
+}
+
+export async function openWorkspace({ onChanges = () => {}, name = "ghc-playground-workspace-v1" } = {}) {
+  const root = await navigator.storage.getDirectory();
+  const handles = [];
+  try {
+    for (const filename of [name, name + ".alternate"]) {
+      const file = await root.getFileHandle(filename, { create: true });
+      handles.push(await file.createSyncAccessHandle());
+    }
+  } catch (error) {
+    for (const handle of handles) handle.close();
+    if (error.name === "NoModificationAllowedError") throw new Error("This workspace is already open in another tab.", { cause: error });
+    throw error;
+  }
+  let handle = handles[0], end = 0, generation = 0, closed = false, broken = false, clock = 0, fresh = false;
+  const pendingRenames = new WeakMap();
+  const ns = time => BigInt(time) * 1000000n;
+  const tick = () => Math.max(Date.now(), clock + 1);
+  const isDirectory = node => node instanceof WorkspaceDirectory;
+  function stamp(node, time, modified = true) {
+    node.ctim = ns(time);
+    if (modified) node.mtim = ns(time);
+  }
+  function initialize(node, path, time) {
+    node.path = path;
+    node.workspace = true;
+    node.linked = true;
+    node.atim = node.mtim = node.ctim = ns(time);
+    node.created = time;
+  }
+  function lookup(path) {
+    const result = directory.get_entry_for_path({ parts: path.slice(ROOT.length).split("/").filter(Boolean), is_dir: false });
+    if (result.ret) fail(result.ret, `Cannot access ${path}`);
+    return result.entry;
+  }
+  function parent(path) {
+    if (path === ROOT) fail(wasi.ERRNO_NOTCAPABLE, "Cannot replace the workspace root");
+    const split = path.lastIndexOf("/"), node = lookup(path.slice(0, split));
+    if (!isDirectory(node)) fail(wasi.ERRNO_NOTDIR, "Parent is not a directory");
+    return [node, path.slice(split + 1)];
+  }
+  function location(node, path, linked = true) {
+    node.path = path;
+    node.linked = linked;
+    if (isDirectory(node)) for (const [name, child] of node.contents) location(child, path + "/" + name, linked);
+  }
+  function appendRecord(target, start, meta, data = new Uint8Array()) {
+    const json = encoder.encode(JSON.stringify(meta));
+    if (json.length + data.length > 0xffffffff) fail(wasi.ERRNO_FBIG, "Workspace journal record is too large");
+    const payload = new Uint8Array(json.length + data.length);
+    payload.set(json); payload.set(data, json.length);
+    const head = new Uint8Array(16), h = new DataView(head.buffer), sum = checksum(payload);
+    h.setUint32(0, MAGIC); h.setUint32(4, payload.length); h.setUint32(8, json.length); h.setUint32(12, sum);
+    const footer = new Uint8Array(8), f = new DataView(footer.buffer);
+    f.setUint32(0, COMMIT); f.setUint32(4, sum);
+    const write = (bytes, at) => {
+      let offset = 0;
+      while (offset < bytes.length) {
+        const count = target.write(bytes.subarray(offset), { at: at + offset });
+        if (!count) fail(wasi.ERRNO_NOSPC, "Workspace storage is full");
+        offset += count;
+      }
+    };
+    try {
+      write(head, start); write(payload, start + 16); target.flush();
+      write(footer, start + 16 + payload.length); target.flush();
+      return start + 24 + payload.length;
+    } catch (error) {
+      try { target.truncate(start); target.flush(); }
+      catch { error.storageUncertain = true; }
+      throw error;
+    }
+  }
+  function flushRecord(meta, data = new Uint8Array()) {
+    if (closed || broken) fail(wasi.ERRNO_IO, "Workspace storage is closed");
+    try { end = appendRecord(handle, end, meta, data); }
+    catch (error) { if (error.storageUncertain) broken = true; throw error; }
+  }
+  function times(node) { return [node.created, String(node.atim), String(node.mtim), String(node.ctim)]; }
+  function restoreTimes(node, values) {
+    if (!values) return;
+    node.created = values[0];
+    [node.atim, node.mtim, node.ctim] = values.slice(1).map(BigInt);
+  }
+  function compact() {
+    if (end <= 4 * 1024 * 1024) return;
+    let footprint = 0;
+    const entries = [];
+    function collect(node) {
+      footprint += 256 + node.path.length * 2 + (isDirectory(node) ? 0 : node.data.length);
+      entries.push(node);
+      if (isDirectory(node)) for (const child of node.contents.values()) collect(child);
+    }
+    collect(directory);
+    if (end <= footprint * 4) return;
+    const target = handles.find(candidate => candidate !== handle);
+    let offset = 0;
+    try {
+      target.truncate(0); target.flush();
+      offset = appendRecord(target, offset, { op: "root", time: clock, generation: generation + 1, times: times(directory) });
+      for (const node of entries.slice(1)) {
+        offset = appendRecord(target, offset, { op: "snapshotEntry", path: node.path, type: isDirectory(node) ? 2 : 1, time: clock, times: times(node) }, isDirectory(node) ? new Uint8Array() : node.data);
+      }
+      offset = appendRecord(target, offset, { op: "snapshot", generation: generation + 1, time: clock });
+      handle = target; end = offset; generation++;
+    } catch {
+      try { target.truncate(0); target.flush(); }
+      catch { broken = true; fail(wasi.ERRNO_IO, "Workspace compaction could not be rolled back"); }
+    }
+  }
+  function apply(meta, bytes, prepared) {
+    const { op, path, time } = meta;
+    clock = Math.max(clock, time);
+    const changes = [];
+    if (op === "root") { initialize(directory, ROOT, time); restoreTimes(directory, meta.times); return changes; }
+    if (op === "snapshot") return changes;
+    if (op === "snapshotEntry") {
+      const [dir, name] = parent(path);
+      const node = meta.type === 2 ? new WorkspaceDirectory(path, time) : new WorkspaceFile(path, time);
+      if (meta.type === 1) node.data = bytes.slice();
+      node.parent = dir; dir.contents.set(name, node); restoreTimes(node, meta.times);
+      return changes;
+    }
+    if (op === "put" || op === "mkdir") {
+      const [dir, name] = parent(path);
+      let node = dir.contents.get(name);
+      if (!node) {
+        node = op === "mkdir" ? new WorkspaceDirectory(path, time) : new WorkspaceFile(path, time);
+        node.parent = dir;
+        dir.contents.set(name, node);
+        changes.push({ path, type: 1 });
+      } else changes.push({ path, type: 0 });
+      if (op === "put") node.data = prepared ?? bytes.slice();
+      stamp(node, time); stamp(dir, time);
+    } else if (op === "write" || op === "truncate") {
+      const node = lookup(path);
+      if (prepared) node.data = prepared;
+      else {
+        const size = op === "truncate" ? meta.size : Math.max(node.data.length, meta.offset + bytes.length);
+        if (size !== node.data.length) {
+          const replacement = new Uint8Array(size);
+          replacement.set(node.data.subarray(0, size)); node.data = replacement;
+        }
+        if (op === "write") node.data.set(bytes, meta.offset);
+      }
+      stamp(node, time);
+      changes.push({ path, type: 0 });
+    } else if (op === "times") {
+      const node = lookup(path);
+      node.atim = BigInt(meta.atim); node.mtim = BigInt(meta.mtim); stamp(node, time, false);
+      changes.push({ path, type: 0 });
+    } else if (op === "delete") {
+      const [dir, name] = parent(path), node = dir.contents.get(name);
+      location(node, path, false); dir.contents.delete(name); stamp(dir, time);
+      changes.push({ path, type: 2 });
+    } else if (op === "rename") {
+      const [from, oldName] = parent(path), [to, newName] = parent(meta.to);
+      const node = from.contents.get(oldName), replaced = to.contents.get(newName);
+      if (replaced) location(replaced, meta.to, false);
+      from.contents.delete(oldName); to.contents.set(newName, node);
+      node.parent = to; location(node, meta.to); stamp(node, time, false); stamp(from, time); stamp(to, time);
+      changes.push({ path, type: 2 }, { path: meta.to, type: replaced ? 0 : 1 });
+    } else fail(wasi.ERRNO_IO, "Unrecognized workspace journal operation");
+    return changes;
+  }
+  function mutate(meta, bytes = new Uint8Array()) {
+    if (closed || broken) fail(wasi.ERRNO_IO, "Workspace storage is closed");
+    let prepared;
+    if (meta.op === "put") prepared = bytes.slice();
+    else if (meta.op === "write" || meta.op === "truncate") {
+      const node = lookup(meta.path);
+      const size = meta.op === "truncate" ? meta.size : Math.max(node.data.length, meta.offset + bytes.length);
+      prepared = new Uint8Array(size);
+      prepared.set(node.data.subarray(0, size));
+      if (meta.op === "write") prepared.set(bytes, meta.offset);
+    }
+    compact();
+    meta.time = tick();
+    flushRecord(meta, bytes);
+    const changes = apply(meta, bytes, prepared);
+    if (changes.length) {
+      try { onChanges(changes); } catch (error) { console.error(error); }
+    }
+  }
+  function setTimes(node, atim, mtim, flags) {
+    try {
+      if ((flags & 3) === 3 || (flags & 12) === 12) fail(wasi.ERRNO_INVAL, "Conflicting timestamp flags");
+      const now = ns(tick());
+      const at = flags & wasi.FSTFLAGS_ATIM ? atim : flags & wasi.FSTFLAGS_ATIM_NOW ? now : node.atim;
+      const mt = flags & wasi.FSTFLAGS_MTIM ? mtim : flags & wasi.FSTFLAGS_MTIM_NOW ? now : node.mtim;
+      if (node.linked) mutate({ op: "times", path: node.path, atim: String(at), mtim: String(mt) });
+      else { node.atim = at; node.mtim = mt; }
+      return 0;
+    } catch (error) { return errno(error); }
+  }
+  function writeNode(node, bytes, offset, truncate = false) {
+    offset = validSize(offset);
+    const size = truncate ? offset : validSize(Math.max(node.data.length, offset + bytes.length));
+    if (node.linked) {
+      mutate(truncate ? { op: "truncate", path: node.path, size } : { op: "write", path: node.path, offset }, bytes);
+    } else {
+      const replacement = new Uint8Array(size);
+      replacement.set(node.data.subarray(0, size));
+      if (!truncate) replacement.set(bytes, offset);
+      node.data = replacement;
+    }
+  }
+  class WorkspaceFile extends File {
+    constructor(path, time) { super([]); initialize(this, path, time); }
+    set_times(atim, mtim, flags) { return setTimes(this, atim, mtim, flags); }
+    path_open(oflags, rights, flags) {
+      try {
+        if (oflags & wasi.OFLAGS_DIRECTORY) fail(wasi.ERRNO_NOTDIR, "Not a directory");
+        if (oflags & wasi.OFLAGS_TRUNC) writeNode(this, new Uint8Array(), 0, true);
+        const fd = new WorkspaceOpenFile(this);
+        fd.append = !!(flags & wasi.FDFLAGS_APPEND);
+        return { ret: 0, fd_obj: fd };
+      } catch (error) { return { ret: errno(error), fd_obj: null }; }
+    }
+  }
+  class WorkspaceOpenFile extends OpenFile {
+    fd_write(bytes) {
+      const result = this.fd_pwrite(bytes, this.append ? this.file.size : this.file_pos);
+      if (!result.ret) this.file_pos = (this.append ? this.file.size : this.file_pos + BigInt(result.nwritten));
+      return result;
+    }
+    fd_pwrite(bytes, offset) {
+      try { writeNode(this.file, bytes, offset); return { ret: 0, nwritten: bytes.length }; }
+      catch (error) { return { ret: errno(error), nwritten: 0 }; }
+    }
+    fd_filestat_set_size(size) {
+      try { writeNode(this.file, new Uint8Array(), size, true); return 0; }
+      catch (error) { return errno(error); }
+    }
+    fd_allocate(offset, length) {
+      const size = offset + length;
+      return size <= this.file.size ? 0 : this.fd_filestat_set_size(size);
+    }
+    fd_fdstat_set_flags(flags) { this.append = !!(flags & wasi.FDFLAGS_APPEND); return 0; }
+    fd_sync() { try { handle.flush(); return 0; } catch (error) { return errno(error); } }
+  }
+  class WorkspaceDirectory extends Directory {
+    constructor(path, time) { super([]); initialize(this, path, time); }
+    set_times(atim, mtim, flags) { return setTimes(this, atim, mtim, flags); }
+    path_open() { return { ret: 0, fd_obj: new WorkspaceOpenDirectory(this) }; }
+  }
+  function rename(from, to, { overwrite = true } = {}) {
+    from = canonical(from); to = canonical(to);
+    const node = lookup(from);
+    if (from === to) return;
+    if (from === ROOT || to === ROOT || to.startsWith(from + "/")) fail(wasi.ERRNO_INVAL, "Invalid rename destination");
+    const [dest, name] = parent(to), target = dest.contents.get(name);
+    if (target) {
+      if (!overwrite) fail(wasi.ERRNO_EXIST, "Destination already exists");
+      if (isDirectory(node) && !isDirectory(target)) fail(wasi.ERRNO_NOTDIR, "Destination is not a directory");
+      if (!isDirectory(node) && isDirectory(target)) fail(wasi.ERRNO_ISDIR, "Destination is a directory");
+      if (isDirectory(target) && target.contents.size) fail(wasi.ERRNO_NOTEMPTY, "Destination directory is not empty");
+    }
+    mutate({ op: "rename", path: from, to });
+  }
+  function remove(path, { recursive = false } = {}) {
+    path = canonical(path);
+    const node = lookup(path); parent(path);
+    if (isDirectory(node) && node.contents.size && !recursive) fail(wasi.ERRNO_NOTEMPTY, "Directory is not empty");
+    mutate({ op: "delete", path });
+  }
+  class WorkspaceOpenDirectory extends OpenDirectory {
+    resolve(path) { return canonical(path, this.dir.path); }
+    path_open(_dirflags, path, oflags, rights, _inheriting, flags) {
+      try {
+        path = this.resolve(path);
+        let node;
+        try { node = lookup(path); } catch (error) { if (error.errno !== wasi.ERRNO_NOENT) throw error; }
+        if (node && oflags & wasi.OFLAGS_CREAT && oflags & wasi.OFLAGS_EXCL) fail(wasi.ERRNO_EXIST, "File already exists");
+        if (!node) {
+          if (!(oflags & wasi.OFLAGS_CREAT)) fail(wasi.ERRNO_NOENT, "File does not exist");
+          parent(path);
+          mutate({ op: oflags & wasi.OFLAGS_DIRECTORY ? "mkdir" : "put", path });
+          node = lookup(path);
+        }
+        return node.path_open(oflags, rights, flags);
+      } catch (error) { return { ret: errno(error), fd_obj: null }; }
+    }
+    path_lookup(path) {
+      try { return { ret: 0, inode_obj: lookup(this.resolve(path)) }; }
+      catch (error) { return { ret: errno(error), inode_obj: null }; }
+    }
+    path_filestat_get(_flags, path) {
+      try { return { ret: 0, filestat: lookup(this.resolve(path)).stat() }; }
+      catch (error) { return { ret: errno(error), filestat: null }; }
+    }
+    path_filestat_set_times(_flags, path, atim, mtim, flags) {
+      try { return lookup(this.resolve(path)).set_times(atim, mtim, flags); }
+      catch (error) { return errno(error); }
+    }
+    path_create_directory(path) {
+      try { fs.mkdirSync(this.resolve(path)); return 0; }
+      catch (error) { return errno(error); }
+    }
+    path_unlink_file(path) {
+      try {
+        path = this.resolve(path);
+        if (isDirectory(lookup(path))) fail(wasi.ERRNO_ISDIR, "Path is a directory");
+        remove(path); return 0;
+      } catch (error) { return errno(error); }
+    }
+    path_remove_directory(path) {
+      try {
+        path = this.resolve(path);
+        if (!isDirectory(lookup(path))) fail(wasi.ERRNO_NOTDIR, "Path is not a directory");
+        remove(path); return 0;
+      } catch (error) { return errno(error); }
+    }
+    path_unlink(path) {
+      try {
+        path = this.resolve(path); parent(path);
+        const node = lookup(path);
+        pendingRenames.set(node, path);
+        return { ret: 0, inode_obj: node };
+      } catch (error) { return { ret: errno(error), inode_obj: null }; }
+    }
+    path_link(path, node, allowDirectory) {
+      try {
+        const from = pendingRenames.get(node);
+        if (!from) fail(node.workspace ? wasi.ERRNO_NOTSUP : wasi.ERRNO_XDEV, "Hard links and cross-volume moves are not supported");
+        if (!allowDirectory) fail(wasi.ERRNO_NOTSUP, "Hard links are not supported");
+        rename(from, this.resolve(path)); pendingRenames.delete(node); return 0;
+      } catch (error) { return errno(error); }
+    }
+    path_symlink() { return wasi.ERRNO_NOTSUP; }
+    path_readlink() { return { ret: wasi.ERRNO_NOTSUP, data: null }; }
+  }
+  const directory = new WorkspaceDirectory(ROOT, 0);
+  function readRecords(source, visit) {
+    const size = source.getSize();
+    let offset = 0;
+    while (offset + 24 <= size) {
+      const head = new Uint8Array(16);
+      if (source.read(head, { at: offset }) !== head.length) break;
+      const h = new DataView(head.buffer), length = h.getUint32(4), jsonLength = h.getUint32(8), sum = h.getUint32(12);
+      if (h.getUint32(0) !== MAGIC || jsonLength > length || offset + length + 24 > size) break;
+      const footer = new Uint8Array(8);
+      source.read(footer, { at: offset + 16 + length });
+      const f = new DataView(footer.buffer);
+      if (f.getUint32(0) !== COMMIT || f.getUint32(4) !== sum) break;
+      const payload = new Uint8Array(length);
+      source.read(payload, { at: offset + 16 });
+      if (checksum(payload) !== sum) fail(wasi.ERRNO_IO, "Workspace journal checksum mismatch");
+      visit(JSON.parse(decoder.decode(payload.subarray(0, jsonLength))), payload.subarray(jsonLength));
+      offset += length + 24;
+    }
+    return offset;
+  }
+  try {
+    const candidates = handles.map(source => {
+      let version = -1, complete = false, first = true;
+      const length = readRecords(source, meta => {
+        if (first) {
+          if (meta.op !== "root") fail(wasi.ERRNO_IO, "Workspace journal has no root");
+          version = meta.generation ?? 0;
+          if (!Number.isSafeInteger(version) || version < 0) fail(wasi.ERRNO_IO, "Invalid workspace journal generation");
+          complete = meta.generation === undefined;
+          first = false;
+        } else if (meta.op === "snapshot") {
+          if (meta.generation !== version) fail(wasi.ERRNO_IO, "Invalid workspace snapshot generation");
+          complete = true;
+        }
+      });
+      return { source, version, complete, length };
+    });
+    const selected = candidates.filter(candidate => candidate.complete).sort((a, b) => b.version - a.version)[0];
+    if (selected) {
+      handle = selected.source; end = selected.length; generation = selected.version;
+      readRecords(handle, apply);
+      if (end !== handle.getSize()) { handle.truncate(end); handle.flush(); }
+    } else {
+      fresh = true;
+      for (const source of handles) { source.truncate(0); source.flush(); }
+      const meta = { op: "root", time: tick(), generation: 0 };
+      flushRecord(meta); apply(meta, new Uint8Array());
+      flushRecord({ op: "snapshot", time: clock, generation: 0 });
+    }
+  } catch (error) { for (const source of handles) source.close(); throw error; }
+
+  const fs = {
+    async stat(path) {
+      const node = lookup(canonical(path));
+      return { type: isDirectory(node) ? 2 : 1, size: isDirectory(node) ? 0 : node.data.length, ctime: node.created, mtime: Number(node.mtim / 1000000n) };
+    },
+    async readdir(path) {
+      const node = lookup(canonical(path));
+      if (!isDirectory(node)) fail(wasi.ERRNO_NOTDIR, "Path is not a directory");
+      return Array.from(node.contents, ([name, child]) => [name, isDirectory(child) ? 2 : 1]);
+    },
+    async readFile(path) {
+      const node = lookup(canonical(path));
+      if (isDirectory(node)) fail(wasi.ERRNO_ISDIR, "Path is a directory");
+      return node.data.slice();
+    },
+    async writeFile(path, bytes, { create = true, overwrite = true } = {}) {
+      path = canonical(path);
+      if (!(bytes instanceof Uint8Array)) bytes = new Uint8Array(bytes);
+      const [dir, name] = parent(path), node = dir.contents.get(name);
+      if (node && isDirectory(node)) fail(wasi.ERRNO_ISDIR, "Path is a directory");
+      if (node && !overwrite) fail(wasi.ERRNO_EXIST, "File already exists");
+      if (!node && !create) fail(wasi.ERRNO_NOENT, "File does not exist");
+      mutate({ op: "put", path }, bytes);
+    },
+    mkdirSync(path) {
+      path = canonical(path);
+      if (path === ROOT) fail(wasi.ERRNO_EXIST, "Path already exists");
+      const [dir, name] = parent(path);
+      if (dir.contents.has(name)) fail(wasi.ERRNO_EXIST, "Path already exists");
+      mutate({ op: "mkdir", path });
+    },
+    async mkdir(path) { this.mkdirSync(path); },
+    async delete(path, options) { remove(path, options); },
+    async rename(from, to, options) { rename(from, to, options); },
+  };
+  return {
+    directory, fs, fresh,
+    mount(rootfs) {
+      rootfs.dir.contents.set("workspace", directory); directory.parent = rootfs.dir;
+      const fd = new WorkspaceOpenDirectory(directory);
+      const paths = { path_open: 1, path_lookup: 0, path_filestat_get: 1, path_filestat_set_times: 1, path_create_directory: 0, path_unlink_file: 0, path_remove_directory: 0, path_unlink: 0, path_link: 0, path_symlink: 1, path_readlink: 0 };
+      const wrapped = new WeakSet();
+      function wrap(descriptor) {
+        if (!(descriptor instanceof OpenDirectory) || wrapped.has(descriptor)) return descriptor;
+        wrapped.add(descriptor);
+        for (const [method, index] of Object.entries(paths)) {
+          const original = descriptor[method].bind(descriptor);
+          descriptor[method] = (...args) => {
+            const path = args[index];
+            if (descriptor.dir === rootfs.dir && typeof path === "string" && !path.startsWith("/") && !path.includes("\0")) {
+              const parts = [];
+              let valid = true;
+              for (const part of path.split("/")) {
+                if (!part || part === ".") continue;
+                if (part === "..") { if (!parts.length) { valid = false; break; } parts.pop(); }
+                else parts.push(part);
+              }
+              if (valid && parts[0] === "workspace") {
+                args[index] = parts.slice(1).join("/");
+                return fd[method](...args);
+              }
+            }
+            if (method === "path_link" && args[1]?.workspace) return wasi.ERRNO_XDEV;
+            const result = original(...args);
+            if (method === "path_open" && result.fd_obj) wrap(result.fd_obj);
+            return result;
+          };
+        }
+        return descriptor;
+      }
+      const originalOpen = rootfs.dir.path_open.bind(rootfs.dir);
+      rootfs.dir.path_open = (...args) => {
+        const result = originalOpen(...args);
+        if (result.fd_obj) wrap(result.fd_obj);
+        return result;
+      };
+      wrap(rootfs);
+      return rootfs;
+    },
+    close() { if (!closed) { closed = true; for (const source of handles) source.close(); } },
+  };
+}
+
+let workspace;
+let assetBase;
+let compiler;
+let loading;
+let session;
+let firstPrompt;
+let promptTail = "";
+const emit = (event, detail) => postMessage({ event, ...detail });
+const describeError = (error) => ({
+  name: error?.name || "Error",
+  message: error?.message || String(error),
+  code: error?.code,
+  stack: error?.stack,
+});
+
+function terminalOutput() {
+  const decoder = new TextDecoder();
+  return new ConsoleStdout((bytes) => {
+    const text = decoder.decode(bytes, { stream: true });
+    if (!text) return;
+    emit("output", { text });
+    if (firstPrompt) {
+      promptTail = (promptTail + text).slice(-256);
+      if (/(?:^|[\r\n])ghci> $/.test(promptTail)) {
+        firstPrompt.resolve();
+        firstPrompt = null;
+      }
+    }
+  });
+}
+
+async function initialize(base) {
+  if (workspace) return;
+  assetBase = base;
+  workspace = await openWorkspace({
+    onChanges(changes) { emit("filesystem", { changes }); },
+  });
+  if (workspace.fresh) {
+    const encoder = new TextEncoder();
+    await workspace.fs.writeFile("/workspace/Greeting.hs", encoder.encode(
+      'module Greeting (greeting) where\n\ngreeting :: String\ngreeting = "Hello, Haskell!"\n'
+    ), { create: true, overwrite: false });
+    await workspace.fs.writeFile("/workspace/Main.hs", encoder.encode(
+      'module Main where\n\nimport Greeting (greeting)\n\nmain :: IO ()\nmain = putStrLn greeting\n'
+    ), { create: true, overwrite: false });
+  }
+}
+
+async function loadCompiler() {
+  emit("status", { text: "Downloading GHC…" });
+  const rootfs = new PreopenDirectory("/", []);
+  const unpack = new WASI(["bsdtar.wasm", "-x"], [], [
+    new OpenFile(new File(new Uint8Array(), { readonly: true })),
+    ConsoleStdout.lineBuffered((line) => console.info(line)),
+    ConsoleStdout.lineBuffered((line) => console.warn(line)),
+    rootfs,
+  ], { debug: false });
+  const [tar, archive, dyld] = await Promise.all([
+    WebAssembly.instantiateStreaming(
+      fetch("https://haskell-wasm.github.io/bsdtar-wasm/bsdtar.wasm"),
+      { wasi_snapshot_preview1: unpack.wasiImport }
+    ),
+    fetch(new URL("rootfs.tar.zst", assetBase)).then(async (response) => {
+      if (!response.ok) throw new Error(`Cannot load rootfs.tar.zst (${response.status})`);
+      return new Uint8Array(await response.arrayBuffer());
+    }),
+    import(new URL("dyld.mjs", assetBase).href),
+  ]);
+  emit("status", { text: "Preparing GHC…" });
+  unpack.fds[0] = new OpenFile(new File(archive, { readonly: true }));
+  const result = unpack.start(tar.instance);
+  if (result !== 0) throw new Error(`Cannot unpack GHC (exit ${result})`);
+  workspace.mount(rootfs);
+  const { ret, entry: libdir } = rootfs.dir.get_entry_for_path({
+    parts: ["tmp", "hslib", "lib"], is_dir: true,
+  });
+  if (ret !== 0) throw new Error("GHC library directory is missing");
+  const directories = [...libdir.contents.keys()].filter((name) => name.startsWith("wasm32-wasi-ghc-"));
+  if (directories.length !== 1) throw new Error("Cannot locate GHC shared libraries");
+  compiler = await dyld.main({
+    rpc: new dyld.DyLDBrowserHost({
+      rootfs,
+      stdoutFd: terminalOutput(),
+      stderrFd: terminalOutput(),
+      shouldConsumeFile: (path) => !path.startsWith("/workspace/"),
+    }),
+    searchDirs: ["/tmp/clib", `/tmp/hslib/lib/${directories[0]}`],
+    mainSoPath: "/tmp/libplayground001.so",
+    args: ["ghci", "+RTS", "-c", "-RTS"],
+    isIserv: false,
+  });
+}
+
+async function start() {
+  if (!workspace) throw new Error("Workspace is not open");
+  if (session) throw new Error("GHCi is already running");
+  loading ??= loadCompiler().catch((error) => { loading = null; throw error; });
+  await loading;
+  if (session) throw new Error("GHCi is already running");
+  emit("status", { text: "Starting GHCi…" });
+  promptTail = "";
+  const ready = new Promise((resolve, reject) => { firstPrompt = { resolve, reject }; });
+  session = Promise.resolve().then(() => compiler.exportFuncs.myMain("/tmp/hslib/lib"));
+  session.then(() => {
+    firstPrompt?.reject(new Error("GHCi exited before its first prompt"));
+    firstPrompt = null;
+    session = null;
+    emit("exit", { error: null });
+  }, (error) => {
+    firstPrompt?.reject(error);
+    firstPrompt = null;
+    session = null;
+    emit("exit", { error: describeError(error) });
+  });
+  await ready;
+  emit("status", { text: "GHCi ready" });
+}
+
+const operations = {
+  init: initialize,
+  start,
+  input: (text) => {
+    if (!session) throw new Error("GHCi is not running");
+    return compiler.exportFuncs.terminalInput(text);
+  },
+  eof: () => {
+    if (!session) return;
+    return compiler.exportFuncs.terminalEOF();
+  },
+  interrupt: () => {
+    if (!session) return;
+    return compiler.exportFuncs.interrupt();
+  },
+};
+self.onmessage = async ({ data }) => {
+  const { id, method, args } = data;
+  try {
+    const fn = method.startsWith("fs.") ? workspace?.fs[method.slice(3)] : operations[method];
+    if (typeof fn !== "function") throw new Error(`Unknown operation: ${method}`);
+    const result = await fn.apply(method.startsWith("fs.") ? workspace.fs : operations, args);
+    postMessage({ id, result });
+  } catch (error) {
+    postMessage({ id, error: describeError(error) });
+  }
+};
+    </script>
+    <script id="runtime" type="module">
+globalThis.createPlaygroundRuntime = async function createPlaygroundRuntime(options = {}) {
+  if (!globalThis.Worker || !navigator.storage?.getDirectory) {
+    throw new Error("This browser needs worker and OPFS support. Open the playground over HTTPS or localhost.");
+  }
+  const source = document.getElementById("runtime-worker").textContent;
+  const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
+  const worker = new Worker(url, { type: "module", name: "haskell-playground" });
+  URL.revokeObjectURL(url);
+  let nextId = 0;
+  let closed = false;
+  const pending = new Map();
+  function restoreError(value) {
+    const error = new Error(value.message);
+    error.name = value.name || "Error";
+    if (value.code) error.code = value.code;
+    if (value.stack) error.stack = value.stack;
+    return error;
+  }
+  function fail(error) {
+    if (closed) return;
+    closed = true;
+    worker.terminate();
+    for (const waiter of pending.values()) waiter.reject(error);
+    pending.clear();
+    options.onExit?.(error);
+  }
+  worker.onmessage = ({ data }) => {
+    if (closed) return;
+    if (data.event) {
+      if (data.event === "output") options.onOutput?.(data.text);
+      if (data.event === "status") options.onStatus?.(data.text);
+      if (data.event === "filesystem") options.onFilesystemChanges?.(data.changes);
+      if (data.event === "exit") options.onExit?.(data.error ? restoreError(data.error) : null);
+      return;
+    }
+    const waiter = pending.get(data.id);
+    if (!waiter) return;
+    pending.delete(data.id);
+    if (data.error) waiter.reject(restoreError(data.error));
+    else waiter.resolve(data.result);
+  };
+  worker.onerror = (event) => {
+    event.preventDefault();
+    fail(new Error(event.message || "GHCi worker failed"));
+  };
+  worker.onmessageerror = () => fail(new Error("GHCi worker sent an invalid message"));
+  function request(method, ...args) {
+    if (closed) return Promise.reject(new Error("GHCi worker is closed"));
+    const id = ++nextId;
+    return new Promise((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      try { worker.postMessage({ id, method, args }); }
+      catch (error) { pending.delete(id); reject(error); }
+    });
+  }
+  const runtime = {
+    fs: Object.fromEntries(["stat", "readdir", "readFile", "writeFile", "mkdir", "delete", "rename"].map(
+      (method) => [method, (...args) => request(`fs.${method}`, ...args)]
+    )),
+    start: () => request("start"),
+    input: (text) => request("input", text),
+    eof: () => request("eof"),
+    interrupt: () => request("interrupt"),
+    close() {
+      if (closed) return;
+      closed = true;
+      worker.terminate();
+      const error = new DOMException("GHCi worker closed", "AbortError");
+      for (const waiter of pending.values()) waiter.reject(error);
+      pending.clear();
+    },
+  };
+  try {
+    await request("init", new URL(".", document.baseURI).href);
+    return runtime;
+  } catch (error) {
+    runtime.close();
+    throw error;
+  }
+};
+window.dispatchEvent(new Event("playground-runtime-ready"));
+    </script>
+    <script type="module-shim">
+      import * as monaco from "@codingame/monaco-vscode-editor-api";
+      import { initialize } from "@codingame/monaco-vscode-api";
+      import getFilesServiceOverride, {
+        registerFileSystemOverlay, FileType,
+        FileSystemProviderCapabilities, FileSystemProviderError, FileSystemProviderErrorCode,
+      } from "@codingame/monaco-vscode-files-service-override";
+      import getModelServiceOverride from "@codingame/monaco-vscode-model-service-override";
+      import getConfigurationServiceOverride, { initUserConfiguration } from "@codingame/monaco-vscode-configuration-service-override";
+      import { Emitter, Event } from "@codingame/monaco-vscode-api/vscode/vs/base/common/event";
+      import { Terminal } from "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/+esm";
+      import { FitAddon } from "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/+esm";
+      import stringWidth from "https://cdn.jsdelivr.net/npm/string-width@7.2.0/+esm";
+
+      const $ = (id) => document.getElementById(id);
+      const status = (message, error = false) => {
+        $("status").textContent = message;
+        $("status").dataset.error = String(error);
+      };
+      const report = (error) => { status(error.message || String(error), true); console.error(error); };
+      const run = (action) => Promise.resolve().then(action).catch(report);
+      const workspace = "/workspace";
+      const models = new Map();
+      let activePath, selectedPath, selectedType, runtime, editor, treeTimer, running = false, output = "";
+      const changes = new Emitter();
+      const terminal = new Terminal({
+        cursorBlink: true, convertEol: true, fontSize: 13,
+        fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace",
+        scrollback: 5000, theme: { background: "#171920", foreground: "#e7e9ef", cursor: "#c8b6ff", selectionBackground: "#6750b366" },
+      });
+      const fit = new FitAddon();
+      terminal.loadAddon(fit);
+      terminal.open($("terminal"));
+      new ResizeObserver(() => fit.fit()).observe($("terminal"));
+      fit.fit();
+      $("clear-terminal").onclick = () => { terminal.clear(); terminal.focus(); };
+
+      const fileError = (error) => new FileSystemProviderError(error.message, {
+        NotFoundError: FileSystemProviderErrorCode.FileNotFound,
+        TypeMismatchError: FileSystemProviderErrorCode.FileNotADirectory,
+        InvalidModificationError: FileSystemProviderErrorCode.FileExists,
+        NotAllowedError: FileSystemProviderErrorCode.NoPermissions,
+      }[error.name] || FileSystemProviderErrorCode[error.code] ||
+        (Object.values(FileSystemProviderErrorCode).includes(error.code) ? error.code : FileSystemProviderErrorCode.Unknown));
+      const provider = {
+        capabilities: FileSystemProviderCapabilities.FileReadWrite | FileSystemProviderCapabilities.PathCaseSensitive,
+        onDidChangeCapabilities: Event.None,
+        onDidChangeFile: changes.event,
+        watch: () => ({ dispose() {} }),
+        async call(method, resource, ...args) {
+          if (resource.path !== workspace && !resource.path.startsWith(workspace + "/")) {
+            throw new FileSystemProviderError("Outside workspace", FileSystemProviderErrorCode.FileNotFound);
+          }
+          try { return await runtime.fs[method](resource.path, ...args); }
+          catch (error) { throw fileError(error); }
+        },
+        stat(resource) {
+          if (resource.path === "/") return Promise.resolve({ type: FileType.Directory, size: 0, ctime: 0, mtime: 0 });
+          return this.call("stat", resource);
+        },
+        readdir(resource) {
+          if (resource.path === "/") return Promise.resolve([["workspace", FileType.Directory]]);
+          return this.call("readdir", resource);
+        },
+        readFile(resource) { return this.call("readFile", resource); },
+        writeFile(resource, content, options) { return this.call("writeFile", resource, content, options); },
+        mkdir(resource) { return this.call("mkdir", resource); },
+        delete(resource, options) { return this.call("delete", resource, options); },
+        rename(from, to, options) { return this.call("rename", from, to.path, options); },
+      };
+
+      const markSaved = () => {
+        const dirty = [...models.values()].some(({ reference }) => reference.object.isDirty());
+        $("save-status").textContent = dirty ? "Saving…" : "All changes saved";
+        renderTabs();
+      };
+      async function save(entry) {
+        clearTimeout(entry.timer);
+        const saved = await entry.reference.object.save();
+        if (!saved && entry.reference.object.isDirty()) throw new Error(`Could not save ${entry.path.slice(workspace.length + 1)}`);
+        markSaved();
+      }
+      async function saveAll() { await Promise.all([...models.values()].map(save)); }
+      function renderTabs() {
+        $("tabs").replaceChildren();
+        for (const [path, entry] of models) {
+          const tab = document.createElement("div");
+          tab.className = "tab" + (path === activePath ? " active" : "");
+          const button = document.createElement("button");
+          button.textContent = path.split("/").at(-1) + (entry.reference.object.isDirty() ? " ●" : "");
+          button.title = path.slice(workspace.length + 1);
+          button.setAttribute("role", "tab");
+          button.setAttribute("aria-selected", String(path === activePath));
+          button.onclick = () => run(() => openFile(path));
+          const close = document.createElement("button");
+          close.className = "close-tab";
+          close.textContent = "×";
+          close.setAttribute("aria-label", `Close ${button.title}`);
+          close.onclick = () => run(() => closeFile(path));
+          tab.append(button, close);
+          $("tabs").append(tab);
+        }
+        $("load-file").disabled = !running || !activePath;
+      }
+      function select(path, type) {
+        selectedPath = path;
+        selectedType = type;
+        $("rename-file").disabled = $("delete-file").disabled = !path;
+        for (const element of $("files").querySelectorAll("[data-path]")) {
+          element.setAttribute("aria-current", String(element.dataset.path === path));
+        }
+      }
+      async function openFile(path) {
+        if (activePath) models.get(activePath).viewState = editor.saveViewState();
+        let entry = models.get(path);
+        if (!entry) {
+          const reference = await monaco.editor.createModelReference(monaco.Uri.file(path));
+          entry = { path, reference, subscriptions: [] };
+          models.set(path, entry);
+          entry.subscriptions.push(reference.object.textEditorModel.onDidChangeContent(() => {
+            clearTimeout(entry.timer);
+            markSaved();
+            entry.timer = setTimeout(() => run(() => save(entry)), 300);
+          }));
+          entry.subscriptions.push(reference.object.onDidChangeDirty(markSaved));
+        }
+        activePath = path;
+        editor.setModel(entry.reference.object.textEditorModel);
+        if (entry.viewState) editor.restoreViewState(entry.viewState);
+        $("empty-editor").hidden = true;
+        $("editor").hidden = false;
+        select(path, FileType.File);
+        renderTabs();
+        editor.focus();
+      }
+      async function closeFile(path, deleted = false) {
+        const entry = models.get(path);
+        if (!entry) return;
+        if (!deleted) await save(entry);
+        clearTimeout(entry.timer);
+        entry.subscriptions.forEach((subscription) => subscription.dispose());
+        models.delete(path);
+        if (activePath === path) {
+          activePath = undefined;
+          editor.setModel(null);
+          const next = [...models.keys()].at(-1);
+          if (next) await openFile(next);
+        }
+        entry.reference.dispose();
+        $("empty-editor").hidden = !!activePath;
+        $("editor").hidden = !activePath;
+        renderTabs();
+      }
+      async function refreshTree() {
+        const expanded = new Set([...$("files").querySelectorAll("details[open]")].map((element) => element.dataset.path));
+        async function directory(path) {
+          const container = document.createElement("div");
+          const entries = await runtime.fs.readdir(path);
+          entries.sort(([a, at], [b, bt]) => (bt === FileType.Directory) - (at === FileType.Directory) || a.localeCompare(b));
+          for (const [name, type] of entries) {
+            const childPath = path + "/" + name;
+            if (type === FileType.Directory) {
+              const details = document.createElement("details");
+              details.dataset.path = childPath;
+              details.open = expanded.has(childPath) || !!selectedPath?.startsWith(childPath + "/");
+              const summary = document.createElement("summary");
+              summary.dataset.path = childPath;
+              summary.textContent = name;
+              summary.onclick = () => select(childPath, type);
+              details.append(summary, await directory(childPath));
+              container.append(details);
+            } else {
+              const button = document.createElement("button");
+              button.className = "file-row";
+              button.dataset.path = childPath;
+              button.title = childPath.slice(workspace.length + 1);
+              const icon = document.createElement("span");
+              icon.className = "file-icon";
+              icon.setAttribute("aria-hidden", "true");
+              icon.textContent = /\.lhs?$/.test(name) || name.endsWith(".hs") ? "λ" : "·";
+              button.append(icon, document.createTextNode(name));
+              button.onclick = () => run(() => openFile(childPath));
+              container.append(button);
+            }
+          }
+          return container;
+        }
+        $("files").replaceChildren(await directory(workspace));
+        select(selectedPath, selectedType);
+      }
+
+      let fileAction;
+      function fileDialog(action) {
+        fileAction = action;
+        const removing = action === "delete";
+        const renaming = action === "rename";
+        $("file-dialog-title").textContent = { file: "New file", folder: "New folder", rename: "Rename", delete: "Delete" }[action];
+        $("file-dialog-description").hidden = !removing;
+        $("file-dialog-description").textContent = removing ? `Delete ${selectedPath.slice(workspace.length + 1)}${selectedType === FileType.Directory ? " and its contents" : ""}? This cannot be undone.` : "";
+        $("file-name-label").hidden = removing;
+        $("file-name").required = !removing;
+        $("file-name").value = renaming ? selectedPath.slice(workspace.length + 1) : selectedType === FileType.Directory ? selectedPath.slice(workspace.length + 1) + "/" : "";
+        $("confirm-file").textContent = removing ? "Delete" : renaming ? "Rename" : "Create";
+        $("file-error").textContent = "";
+        $("file-dialog").showModal();
+        if (!removing) { $("file-name").focus(); if (renaming) $("file-name").select(); }
+      }
+      async function ensureParents(path) {
+        let parent = workspace;
+        for (const part of path.slice(workspace.length + 1).split("/").slice(0, -1)) {
+          parent += "/" + part;
+          try { await runtime.fs.stat(parent); }
+          catch (error) {
+            if (error.name !== "NotFoundError" && error.code !== "FileNotFound" && error.code !== FileSystemProviderErrorCode.FileNotFound) throw error;
+            await runtime.fs.mkdir(parent);
+          }
+        }
+      }
+      $("file-form").onsubmit = (event) => {
+        event.preventDefault();
+        run(async () => {
+          $("confirm-file").disabled = true;
+          try {
+            const name = $("file-name").value.trim();
+            if (fileAction !== "delete" && (!name || name.split("/").some((part) => !part || part === "." || part === "..") || /[\0\\]/.test(name))) {
+              throw new Error("Enter a relative path with a name for each folder and file.");
+            }
+            const path = workspace + "/" + name;
+            if (fileAction === "file" || fileAction === "folder") {
+              await ensureParents(path);
+              if (fileAction === "file") {
+                await runtime.fs.writeFile(path, new Uint8Array(), { create: true, overwrite: false });
+                await openFile(path);
+              } else {
+                await runtime.fs.mkdir(path);
+                select(path, FileType.Directory);
+              }
+            } else {
+              const previous = selectedPath;
+              const previousType = selectedType;
+              const affected = [...models.keys()].filter((key) => key === previous || key.startsWith(previous + "/"));
+              await saveAll();
+              if (fileAction === "rename") {
+                await ensureParents(path);
+                await runtime.fs.rename(previous, path, { overwrite: false });
+                for (const key of affected) { await closeFile(key, true); await openFile(path + key.slice(previous.length)); }
+                select(path, previousType);
+              } else {
+                await runtime.fs.delete(previous, { recursive: selectedType === FileType.Directory });
+                for (const key of affected) await closeFile(key, true);
+                select(undefined, undefined);
+              }
+            }
+            await refreshTree();
+            $("file-dialog").close();
+          } catch (error) { $("file-error").textContent = error.message; }
+          finally { $("confirm-file").disabled = false; }
+        });
+      };
+      $("cancel-file").onclick = () => $("file-dialog").close();
+      $("new-file").onclick = () => fileDialog("file");
+      $("new-folder").onclick = () => fileDialog("folder");
+      $("rename-file").onclick = () => fileDialog("rename");
+      $("delete-file").onclick = () => fileDialog("delete");
+      $("save-all").onclick = () => run(saveAll);
+      document.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+          event.preventDefault();
+          if (runtime) run(saveAll);
+        }
+      });
+      window.addEventListener("beforeunload", (event) => {
+        if ([...models.values()].some(({ reference }) => reference.object.isDirty())) {
+          event.preventDefault();
+          event.returnValue = "";
+        }
+      });
+      window.addEventListener("pagehide", () => runtime?.close());
+
+      let line = [], cursor = 0, lineStart, historyIndex = 0, draft = [], terminalQueue = Promise.resolve();
+      const history = [];
+      const writeTerminal = (text) => new Promise((resolve) => terminal.write(text, resolve));
+      const terminalTask = (action) => { terminalQueue = terminalQueue.then(action).catch(report); };
+      async function redrawLine() {
+        await writeTerminal("");
+        if (!lineStart) lineStart = { row: terminal.buffer.active.baseY + terminal.buffer.active.cursorY, column: terminal.buffer.active.cursorX };
+        const row = lineStart.row - terminal.buffer.active.baseY;
+        await writeTerminal(`\x1b[${Math.max(0, row) + 1};${lineStart.column + 1}H\x1b[J` + line.join(""));
+        const tail = line.slice(cursor).join("");
+        if (tail) {
+          const position = lineStart.column + stringWidth(line.slice(0, cursor).join(""));
+          await writeTerminal(`\x1b[${Math.max(0, lineStart.row - terminal.buffer.active.baseY) + Math.floor(position / terminal.cols) + 1};${position % terminal.cols + 1}H`);
+        }
+      }
+      async function submitLine(command = line.join("")) {
+        await saveAll();
+        if (command && history.at(-1) !== command) history.push(command);
+        historyIndex = history.length;
+        line = []; cursor = 0; draft = []; lineStart = undefined;
+        await writeTerminal("\r\n");
+        await runtime.input(command + "\n");
+      }
+      async function sendCommand(command) {
+        if (!running) return;
+        line = Array.from(command); cursor = line.length;
+        await redrawLine();
+        await submitLine(command);
+        terminal.focus();
+      }
+      async function interrupt() {
+        line = []; cursor = 0; lineStart = undefined;
+        await writeTerminal("^C\r\n");
+        await runtime.interrupt();
+      }
+      terminal.onData((data) => terminalTask(async () => {
+        if (!running) return;
+        let submitted = false;
+        if (data === "\x03") { await interrupt(); return; }
+        if (data === "\x04") {
+          if (!line.length) await runtime.eof();
+          else if (cursor < line.length) { line.splice(cursor, 1); await redrawLine(); }
+          return;
+        }
+        if (data === "\x1b[A" || data === "\x1b[B") {
+          if (historyIndex === history.length) draft = [...line];
+          historyIndex = Math.max(0, Math.min(history.length, historyIndex + (data === "\x1b[A" ? -1 : 1)));
+          line = historyIndex === history.length ? [...draft] : Array.from(history[historyIndex]);
+          cursor = line.length;
+        } else if (data === "\x1b[D") cursor = Math.max(0, cursor - 1);
+        else if (data === "\x1b[C") cursor = Math.min(line.length, cursor + 1);
+        else if (data === "\x01" || data === "\x1b[H" || data === "\x1b[1~") cursor = 0;
+        else if (data === "\x05" || data === "\x1b[F" || data === "\x1b[4~") cursor = line.length;
+        else if (data === "\x7f" || data === "\b") { if (cursor) line.splice(--cursor, 1); }
+        else if (data === "\x1b[3~") line.splice(cursor, 1);
+        else if (data === "\x15") { line.splice(0, cursor); cursor = 0; }
+        else if (data === "\x0b") line.splice(cursor);
+        else if (data === "\x0c") { terminal.clear(); return; }
+        else if (!data.startsWith("\x1b")) {
+          for (const character of data.replace(/\r\n/g, "\n")) {
+            if (character === "\r" || character === "\n") { await redrawLine(); await submitLine(); submitted = true; }
+            else if (character >= " " || character === "\t") {
+              submitted = false;
+              const inserted = character === "\t" ? [" ", " "] : [character];
+              line.splice(cursor, 0, ...inserted);
+              cursor += inserted.length;
+            }
+          }
+        }
+        if (!submitted) await redrawLine();
+      }));
+      $("load-file").onclick = () => terminalTask(() => sendCommand(":load " + JSON.stringify(activePath)));
+      $("reload").onclick = () => terminalTask(() => sendCommand(":reload"));
+      $("interrupt").onclick = () => terminalTask(interrupt);
+
+      const runtimeOptions = {
+        onOutput(text) { output += text; terminal.write(text); if (!line.length) lineStart = undefined; },
+        onStatus: status,
+        onFilesystemChanges(events) {
+          changes.fire(events.map(({ path, type }) => ({ resource: monaco.Uri.file(path), type })));
+          clearTimeout(treeTimer);
+          treeTimer = setTimeout(() => run(refreshTree), 100);
+        },
+        onExit(error) {
+          running = false;
+          $("reload").disabled = $("interrupt").disabled = true;
+          renderTabs();
+          status(error ? `GHCi stopped: ${error.message || error}` : "GHCi exited. Press Restart to start again.", !!error);
+        },
+      };
+      let ready, restarting;
+      async function startRuntime() {
+        await runtime.start();
+        running = true;
+        $("reload").disabled = $("interrupt").disabled = false;
+        renderTabs();
+        status("GHCi ready");
+      }
+      function restartRuntime() {
+        if (restarting) return restarting;
+        running = false;
+        $("restart").disabled = $("reload").disabled = $("interrupt").disabled = true;
+        renderTabs();
+        clearTimeout(treeTimer);
+        for (const entry of models.values()) clearTimeout(entry.timer);
+        line = []; cursor = 0; lineStart = undefined;
+        terminalQueue = Promise.resolve();
+        runtime.close();
+        ready = restarting = (async () => {
+          try {
+            status("Restarting GHCi…");
+            runtime = await globalThis.createPlaygroundRuntime(runtimeOptions);
+            await saveAll();
+            await startRuntime();
+            terminal.focus();
+          } finally {
+            restarting = undefined;
+            $("restart").disabled = false;
+          }
+        })();
+        return ready;
+      }
+      $("restart").onclick = () => run(restartRuntime);
+
+      try {
+        if (typeof globalThis.createPlaygroundRuntime !== "function") {
+          await new Promise((resolve) => window.addEventListener("playground-runtime-ready", resolve, { once: true }));
+        }
+        runtime = await globalThis.createPlaygroundRuntime(runtimeOptions);
+        registerFileSystemOverlay(1, provider);
+        await initUserConfiguration(JSON.stringify({
+          "editor.fontSize": 14, "editor.minimap.enabled": false, "editor.scrollBeyondLastLine": false,
+          "editor.tabSize": 2, "editor.insertSpaces": true, "editor.automaticLayout": true,
+          "files.autoSave": "off", "files.eol": "\n",
+        }));
+        await initialize({ ...getFilesServiceOverride(), ...getModelServiceOverride(), ...getConfigurationServiceOverride() }, $("editor"), {
+          workspaceProvider: { workspace: { folderUri: monaco.Uri.file(workspace) }, trusted: true, open: async () => false },
+        });
+        const workerURL = URL.createObjectURL(new Blob([
+          'import "https://esm.sh/@codingame/monaco-vscode-editor-api@37.0.0/esm/vs/editor/editor.worker?bundle";',
+        ], { type: "text/javascript" }));
+        globalThis.MonacoEnvironment = { getWorker: () => new Worker(workerURL, { type: "module" }) };
+        monaco.languages.register({ id: "haskell", extensions: [".hs", ".lhs"], aliases: ["Haskell"] });
+        monaco.languages.setMonarchTokensProvider("haskell", {
+          keywords: ["as", "case", "class", "data", "default", "deriving", "do", "else", "family", "forall", "foreign", "hiding", "if", "import", "in", "infix", "infixl", "infixr", "instance", "let", "module", "newtype", "of", "qualified", "then", "type", "where"],
+          tokenizer: {
+            root: [
+              [/--.*$/, "comment"], [/\{-/, "comment", "@comment"],
+              [/"/, "string", "@string"], [/'(?:[^'\\]|\\.)'/, "string"],
+              [/\b(?:0[xX][\da-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/, "number"],
+              [/[A-Z][\w']*/, "type.identifier"],
+              [/[a-z_][\w']*/, { cases: { "@keywords": "keyword", "@default": "identifier" } }],
+              [/[!#$%&*+.\/<=>?@\\^|~:-]+/, "operator"],
+            ],
+            comment: [[/[^\{-]+/, "comment"], [/\{-/, "comment", "@push"], [/-\}/, "comment", "@pop"], [/[\{-]/, "comment"]],
+            string: [[/[^\\"]+/, "string"], [/\\./, "string.escape"], [/"/, "string", "@pop"]],
+          },
+        });
+        monaco.languages.setLanguageConfiguration("haskell", {
+          comments: { lineComment: "--", blockComment: ["{-", "-}"] },
+          brackets: [["{", "}"], ["[", "]"], ["(", ")"]],
+          autoClosingPairs: [{ open: "(", close: ")" }, { open: "[", close: "]" }, { open: "{", close: "}" }, { open: '"', close: '"', notIn: ["string", "comment"] }],
+        });
+        editor = monaco.editor.create($("editor"), { model: null, theme: "vs-dark", automaticLayout: true });
+        await refreshTree();
+        const files = await runtime.fs.readdir(workspace);
+        const initial = files.find(([name, type]) => type === FileType.File && name === "Main.hs") || files.find(([, type]) => type === FileType.File);
+        if (initial) await openFile(workspace + "/" + initial[0]);
+        else { $("empty-editor").hidden = false; $("editor").hidden = true; }
+        $("new-file").disabled = $("new-folder").disabled = $("save-all").disabled = false;
+        markSaved();
+        ready = startRuntime();
+        globalThis.playground = {
+          get runtime() { return runtime; }, get fs() { return runtime.fs; }, get ready() { return ready; },
+          editor, models, terminal, saveAll, openFile, closeFile, refreshTree, sendCommand,
+          restart: restartRuntime, get output() { return output; },
+        };
+        $("restart").disabled = false;
+        await ready;
+      } catch (error) { report(error); terminal.writeln(`\r\n${error.message}`); }
+    </script>
   </body>
 </html>
