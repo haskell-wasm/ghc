@@ -147,6 +147,8 @@ initSettings top_dir = do
   ghcWithInterpreter <- getBooleanSetting "Use interpreter"
 
   baseUnitId <- getSetting_raw "base unit-id"
+  ghcUnitId <- getSetting_raw "Project Unit Id"
+  ghcInternalUnitId <- getSetting_raw "ghc-internal Unit Id"
 
   return $ Settings
     { sGhcNameVersion = GhcNameVersion
@@ -165,6 +167,8 @@ initSettings top_dir = do
     , sUnitSettings = UnitSettings
       {
         unitSettings_baseUnitId = stringToUnitId baseUnitId
+      , unitSettings_ghcUnitId = stringToUnitId ghcUnitId
+      , unitSettings_ghcInternalUnitId = stringToUnitId ghcInternalUnitId
       }
 
     , sToolSettings = ToolSettings

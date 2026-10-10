@@ -514,7 +514,8 @@ opt_i dflags= toolSettings_opt_i $ toolSettings dflags
 
 
 setBaseUnitId :: String -> DynP ()
-setBaseUnitId s = upd $ \d -> d { unitSettings = UnitSettings (stringToUnitId s) }
+setBaseUnitId s = upd $ \d -> d
+  { unitSettings = (unitSettings d) { unitSettings_baseUnitId = stringToUnitId s } }
 
 -----------------------------------------------------------------------------
 
@@ -3612,8 +3613,6 @@ compilerInfo dflags
        ("Project Patch Level",         cProjectPatchLevel),
        ("Project Patch Level1",        cProjectPatchLevel1),
        ("Project Patch Level2",        cProjectPatchLevel2),
-       ("Project Unit Id",             cProjectUnitId),
-       ("ghc-internal Unit Id",        cGhcInternalUnitId), -- See Note [Special unit-ids]
        ("Booter version",              cBooterVersion),
        ("Stage",                       cStage),
        ("Build platform",              cBuildPlatformString),

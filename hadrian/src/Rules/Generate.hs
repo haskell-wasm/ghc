@@ -435,6 +435,8 @@ bindistRules = do
     , interpolateVar "UseLibffiForAdjustors" $ yesNo <$> getTarget tgtUseLibffiForAdjustors
     , interpolateVar "GhcWithSMP" $ yesNo <$> targetSupportsSMP
     , interpolateVar "BaseUnitId" $ pkgUnitId Stage1 base
+    , interpolateVar "GhcUnitId" $ pkgUnitId Stage1 compiler
+    , interpolateVar "GhcInternalUnitId" $ pkgUnitId Stage1 ghcInternal
     , interpolateVar "TargetPlatformFull" (setting TargetPlatformFull)
     , interpolateVar "BuildPlatformFull" (setting BuildPlatformFull)
     , interpolateVar "HostPlatformFull"  (setting HostPlatformFull)
@@ -466,21 +468,21 @@ generateSettings settingsFile = do
     ctx <- getContext
     stage <- getStage
 
-    package_db_path <- expr $ do
-      let get_pkg_db stg = packageDbPath (PackageDbLoc stg Final)
-      case stage of
-        Stage0 {} -> error "Unable to generate settings for stage0"
-        Stage1 -> get_pkg_db Stage1
-        Stage2 -> get_pkg_db Stage1
-        Stage3 -> get_pkg_db Stage2
+    let libraryStage =
+          -- Use the stage supplying the target package database, which can
+          -- differ from the host stage used to build a cross compiler.
+          case stage of
+            Stage0 {} -> error "Unable to generate settings for stage0"
+            Stage1 -> Stage1
+            Stage2 -> Stage1
+            Stage3 -> Stage2
 
-    -- The unit-id of the base package which is always linked against (#25382)
-    base_unit_id <- expr $ do
-      case stage of
-        Stage0 {} -> error "Unable to generate settings for stage0"
-        Stage1 -> pkgUnitId Stage1 base
-        Stage2 -> pkgUnitId Stage1 base
-        Stage3 -> pkgUnitId Stage2 base
+    package_db_path <- expr $ packageDbPath (PackageDbLoc libraryStage Final)
+
+    -- These are the units supplied in the target package database.
+    base_unit_id <- expr $ pkgUnitId libraryStage base
+    ghc_unit_id <- expr $ pkgUnitId libraryStage compiler
+    ghc_internal_unit_id <- expr $ pkgUnitId libraryStage ghcInternal
 
     let rel_pkg_db = makeRelativeNoSysLink (dropFileName settingsFile) package_db_path
 
@@ -490,6 +492,8 @@ generateSettings settingsFile = do
         , ("RTS ways", escapeArgs . map show . Set.toList <$> getRtsWays)
         , ("Relative Global Package DB", pure rel_pkg_db)
         , ("base unit-id", pure base_unit_id)
+        , ("Project Unit Id", pure ghc_unit_id)
+        , ("ghc-internal Unit Id", pure ghc_internal_unit_id)
         ]
     let showTuple (k, v) = "(" ++ show k ++ ", " ++ show v ++ ")"
     pure $ case settings of
@@ -523,7 +527,6 @@ generateConfigHs = do
     -- unit-id in both situations.
     cProjectUnitId <- expr . (`pkgUnitId` compiler) =<< getStage
 
-    cGhcInternalUnitId <- expr . (`pkgUnitId` ghcInternal) =<< getStage
     return $ unlines
         [ "module GHC.Settings.Config"
         , "  ( module GHC.Version"
@@ -533,7 +536,6 @@ generateConfigHs = do
         , "  , cBooterVersion"
         , "  , cStage"
         , "  , cProjectUnitId"
-        , "  , cGhcInternalUnitId"
         , "  ) where"
         , ""
         , "import GHC.Prelude.Basic"
@@ -557,9 +559,6 @@ generateConfigHs = do
         , ""
         , "cProjectUnitId :: String"
         , "cProjectUnitId = " ++ show cProjectUnitId
-        , ""
-        , "cGhcInternalUnitId :: String"
-        , "cGhcInternalUnitId = " ++ show cGhcInternalUnitId
         ]
   where
     stageString (Stage0 InTreeLibs) = "1"
